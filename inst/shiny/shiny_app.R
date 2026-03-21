@@ -31,11 +31,12 @@ DB_PATH   <- "data/database/reserving.db"
 DATA_DIR  <- "data/schedule_p"
 AY_MIN    <- 1998L
 AY_MAX    <- 2007L
-LOB_CODES <- c("WC" = "Workers Compensation",
-               "CMP" = "Commercial Multi-Peril",
-               "OL"  = "Other Liability",
-               "CA"  = "Commercial Auto",
-               "MM"  = "Medical Malpractice")
+LOB_CODES <- c("Workers Compensation"  = "WC",
+               "Other Liability"       = "OL",
+               "Product Liability"     = "PL",
+               "Commercial Auto"       = "CA",
+               "Private Passenger Auto"= "PA",
+               "Medical Malpractice"   = "MM")
 
 
 # ── Pure helpers ───────────────────────────────────────────────────────────────
