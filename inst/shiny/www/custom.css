@@ -1,0 +1,654 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   P&C Causal Reserving Intelligence — custom.css
+   Palette:
+     Navy    #00338D   (primary / navbar)
+     Teal    #00A3A1   (accent / card-top)
+     Violet  #470A68   (sidebar)
+     Purple  #483698   (card-headers / analytical)
+     Sky     #0091DA   (info highlight)
+     Green   #43B02A   (success)
+     Red     #DC2626   (danger)
+     Bg      #F3F6FB
+     Surface #FFFFFF
+     Border  #E2EAF4
+     Text    #1A2332
+══════════════════════════════════════════════════════════════════════════════ */
+
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Arial, sans-serif;
+  color: #1A2332;
+  background-color: #F3F6FB;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+
+/* ── Navbar ──────────────────────────────────────────────────────────────── */
+.navbar {
+  background-color: #00338D !important;
+  border-bottom: 2px solid #0091DA !important;
+  padding: 0.75rem 1.5rem !important;
+}
+.navbar-brand {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none !important;
+}
+.pc-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+.pc-title {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #FFFFFF;
+  line-height: 1.05;
+}
+.pc-subtitle {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.72);
+  line-height: 1.2;
+}
+/* Nav-panel tabs in the navbar */
+.navbar .nav-link {
+  color: rgba(255,255,255,0.82) !important;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.navbar .nav-link.active,
+.navbar .nav-link:hover {
+  color: #FFFFFF !important;
+}
+.navbar .nav-link.active {
+  border-bottom: 2px solid #00A3A1 !important;
+}
+
+
+/* ── Sidebar — violet theme ──────────────────────────────────────────────── */
+.bslib-sidebar-layout > .sidebar,
+aside.bslib-sidebar-layout > .sidebar {
+  background-color: #470A68 !important;
+  border-right: none !important;
+  box-shadow: 2px 0 12px rgba(71,10,104,0.22);
+  color: rgba(255,255,255,0.9);
+}
+/* Sidebar toggle chevron */
+.bslib-sidebar-layout > .collapse-toggle,
+aside.bslib-sidebar-layout > .collapse-toggle {
+  color: #FFFFFF !important;
+  background: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.25) !important;
+}
+/* Section labels */
+.bslib-sidebar-layout > .sidebar h5,
+aside.bslib-sidebar-layout > .sidebar h5,
+.bslib-sidebar-layout > .sidebar h6,
+aside.bslib-sidebar-layout > .sidebar h6 {
+  color: rgba(255,255,255,0.65);
+  font-weight: 700;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  margin-top: 1.125rem;
+  margin-bottom: 0.5rem;
+}
+/* Body text */
+.bslib-sidebar-layout > .sidebar label,
+.bslib-sidebar-layout > .sidebar .form-label,
+.bslib-sidebar-layout > .sidebar p,
+.bslib-sidebar-layout > .sidebar .small,
+aside.bslib-sidebar-layout > .sidebar label,
+aside.bslib-sidebar-layout > .sidebar .form-label,
+aside.bslib-sidebar-layout > .sidebar p,
+aside.bslib-sidebar-layout > .sidebar .small {
+  color: rgba(255,255,255,0.9) !important;
+}
+.bslib-sidebar-layout > .sidebar .text-muted,
+aside.bslib-sidebar-layout > .sidebar .text-muted {
+  color: rgba(255,255,255,0.55) !important;
+}
+/* Horizontal rules */
+.bslib-sidebar-layout > .sidebar hr,
+aside.bslib-sidebar-layout > .sidebar hr {
+  border-color: rgba(255,255,255,0.18) !important;
+}
+
+
+/* ── Sidebar form controls ───────────────────────────────────────────────── */
+.bslib-sidebar-layout > .sidebar .form-control,
+.bslib-sidebar-layout > .sidebar .form-select,
+aside.bslib-sidebar-layout > .sidebar .form-control,
+aside.bslib-sidebar-layout > .sidebar .form-select {
+  background-color: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.25) !important;
+  color: #FFFFFF !important;
+}
+.bslib-sidebar-layout > .sidebar .form-control::placeholder,
+aside.bslib-sidebar-layout > .sidebar .form-control::placeholder {
+  color: rgba(255,255,255,0.4) !important;
+}
+.bslib-sidebar-layout > .sidebar .form-control:focus,
+.bslib-sidebar-layout > .sidebar .form-select:focus,
+aside.bslib-sidebar-layout > .sidebar .form-control:focus,
+aside.bslib-sidebar-layout > .sidebar .form-select:focus {
+  border-color: #00A3A1 !important;
+  box-shadow: 0 0 0 3px rgba(0,163,161,0.3) !important;
+  background-color: rgba(255,255,255,0.18) !important;
+}
+/* Selectize */
+.bslib-sidebar-layout > .sidebar .selectize-input,
+aside.bslib-sidebar-layout > .sidebar .selectize-input {
+  background-color: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.25) !important;
+  color: #FFFFFF !important;
+}
+.bslib-sidebar-layout > .sidebar .selectize-input input,
+.bslib-sidebar-layout > .sidebar .selectize-input .item,
+aside.bslib-sidebar-layout > .sidebar .selectize-input input,
+aside.bslib-sidebar-layout > .sidebar .selectize-input .item {
+  color: #FFFFFF !important;
+}
+/* Sliders: teal fill */
+.bslib-sidebar-layout > .sidebar .irs--shiny .irs-bar,
+aside.bslib-sidebar-layout > .sidebar .irs--shiny .irs-bar {
+  background: #00A3A1 !important;
+  border-top-color: #00A3A1 !important;
+  border-bottom-color: #00A3A1 !important;
+}
+.bslib-sidebar-layout > .sidebar .irs--shiny .irs-handle,
+aside.bslib-sidebar-layout > .sidebar .irs--shiny .irs-handle {
+  background: #FFFFFF !important;
+  border-color: #00A3A1 !important;
+}
+.bslib-sidebar-layout > .sidebar .irs--shiny .irs-from,
+.bslib-sidebar-layout > .sidebar .irs--shiny .irs-to,
+.bslib-sidebar-layout > .sidebar .irs--shiny .irs-single,
+aside.bslib-sidebar-layout > .sidebar .irs--shiny .irs-from,
+aside.bslib-sidebar-layout > .sidebar .irs--shiny .irs-to,
+aside.bslib-sidebar-layout > .sidebar .irs--shiny .irs-single {
+  background: #00A3A1 !important;
+  color: #FFFFFF !important;
+}
+.bslib-sidebar-layout > .sidebar .irs--shiny .irs-min,
+.bslib-sidebar-layout > .sidebar .irs--shiny .irs-max,
+aside.bslib-sidebar-layout > .sidebar .irs--shiny .irs-min,
+aside.bslib-sidebar-layout > .sidebar .irs--shiny .irs-max {
+  color: rgba(255,255,255,0.6) !important;
+  background: rgba(255,255,255,0.12) !important;
+}
+/* Checkboxes */
+.bslib-sidebar-layout > .sidebar .form-check-input,
+aside.bslib-sidebar-layout > .sidebar .form-check-input {
+  background-color: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.35) !important;
+}
+.bslib-sidebar-layout > .sidebar .form-check-input:checked,
+aside.bslib-sidebar-layout > .sidebar .form-check-input:checked {
+  background-color: #00A3A1 !important;
+  border-color: #00A3A1 !important;
+}
+.bslib-sidebar-layout > .sidebar .form-check-label,
+aside.bslib-sidebar-layout > .sidebar .form-check-label {
+  color: rgba(255,255,255,0.9) !important;
+}
+
+
+/* ── Sidebar buttons ─────────────────────────────────────────────────────── */
+/* Primary: contrasting teal */
+.bslib-sidebar-layout > .sidebar .btn-primary,
+aside.bslib-sidebar-layout > .sidebar .btn-primary {
+  background-color: #00A3A1 !important;
+  border-color: #00A3A1 !important;
+  color: #FFFFFF !important;
+  font-weight: 700;
+}
+.bslib-sidebar-layout > .sidebar .btn-primary:hover,
+.bslib-sidebar-layout > .sidebar .btn-primary:focus,
+aside.bslib-sidebar-layout > .sidebar .btn-primary:hover,
+aside.bslib-sidebar-layout > .sidebar .btn-primary:focus {
+  background-color: #007F7D !important;
+  border-color: #007F7D !important;
+  box-shadow: 0 0 0 3px rgba(0,163,161,0.35) !important;
+}
+/* Outline-secondary: frosted white */
+.bslib-sidebar-layout > .sidebar .btn-outline-secondary,
+aside.bslib-sidebar-layout > .sidebar .btn-outline-secondary {
+  color: #FFFFFF !important;
+  border-color: rgba(255,255,255,0.4) !important;
+  background-color: transparent !important;
+  font-weight: 600;
+}
+.bslib-sidebar-layout > .sidebar .btn-outline-secondary:hover,
+aside.bslib-sidebar-layout > .sidebar .btn-outline-secondary:hover {
+  background-color: rgba(255,255,255,0.15) !important;
+  border-color: rgba(255,255,255,0.65) !important;
+  color: #FFFFFF !important;
+}
+/* Success */
+.bslib-sidebar-layout > .sidebar .btn-success,
+aside.bslib-sidebar-layout > .sidebar .btn-success {
+  background-color: #43B02A !important;
+  border-color: #43B02A !important;
+  color: #FFFFFF !important;
+}
+/* Danger */
+.bslib-sidebar-layout > .sidebar .btn-danger,
+aside.bslib-sidebar-layout > .sidebar .btn-danger {
+  background-color: rgba(220,38,38,0.85) !important;
+  border-color: rgba(220,38,38,0.85) !important;
+}
+
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.card {
+  border: 1px solid #E2EAF4 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+  background-color: #FFFFFF;
+  margin-bottom: 1rem;
+}
+/* Violet analytical card headers (all tabs in P&C are analytical) */
+.card-header {
+  background-color: #483698 !important;
+  color: #FFFFFF !important;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(255,255,255,0.15) !important;
+  border-top: none !important;
+  border-radius: 10px 10px 0 0 !important;
+  padding: 0.875rem 1.125rem;
+}
+/* Inline action buttons inside card headers */
+.card-header .btn {
+  color: #FFFFFF !important;
+  border-color: rgba(255,255,255,0.4) !important;
+  background-color: transparent !important;
+}
+.card-header .btn:hover {
+  background-color: rgba(255,255,255,0.15) !important;
+}
+/* Muted labels inside violet headers */
+.card-header .text-muted,
+.card-header [style*="color:#64748B"],
+.card-header small {
+  color: rgba(255,255,255,0.65) !important;
+}
+.card-body { padding: 1.125rem; }
+.card-footer {
+  background-color: #F8FAFC;
+  border-top: 1px solid #E2EAF4;
+  border-radius: 0 0 10px 10px;
+  padding: 0.625rem 1.125rem;
+  font-size: 0.8125rem;
+  color: #64748B;
+}
+
+
+/* ── Value boxes ─────────────────────────────────────────────────────────── */
+.bslib-value-box {
+  border-radius: 10px !important;
+  border: 1px solid #E2EAF4 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+}
+.bslib-value-box .value-box-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.bslib-value-box .value-box-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+
+/* ── Tabs (page_navbar panels) ───────────────────────────────────────────── */
+.nav-tabs {
+  border-bottom: 1px solid #E2EAF4;
+  padding: 0 0.25rem;
+}
+.nav-tabs .nav-link {
+  color: #64748B;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.625rem 1.125rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  margin-bottom: -1px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.nav-tabs .nav-link.active {
+  color: #00338D;
+  font-weight: 600;
+  border-bottom: 2px solid #00338D;
+  background: transparent;
+}
+.nav-tabs .nav-link:hover:not(.active) {
+  color: #1A2332;
+  border-bottom-color: #C6D4E8;
+  background: transparent;
+}
+
+
+/* ── Buttons (main content) ──────────────────────────────────────────────── */
+.btn-primary {
+  background-color: #00338D !important;
+  border-color: #00338D !important;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 6px;
+}
+.btn-primary:hover, .btn-primary:focus {
+  background-color: #002370 !important;
+  border-color: #002370 !important;
+  box-shadow: 0 0 0 3px rgba(0,51,141,0.2) !important;
+}
+.btn-outline-secondary {
+  color: #374151 !important;
+  border-color: #CBD5E1 !important;
+  background-color: #FFFFFF !important;
+  font-size: 0.8125rem;
+  border-radius: 6px;
+}
+.btn-outline-secondary:hover {
+  background-color: #F1F5F9 !important;
+  color: #1A2332 !important;
+  border-color: #94A3B8 !important;
+}
+.btn-outline-primary {
+  color: #00338D !important;
+  border-color: #00338D !important;
+  font-size: 0.875rem;
+  border-radius: 6px;
+}
+.btn-outline-primary:hover {
+  background-color: #00338D !important;
+  color: #FFFFFF !important;
+}
+.btn-success {
+  background-color: #16A34A !important;
+  border-color: #16A34A !important;
+  font-weight: 600;
+}
+.btn-danger {
+  background-color: #DC2626 !important;
+  border-color: #DC2626 !important;
+  font-weight: 600;
+}
+.btn-sm {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.7rem;
+}
+
+
+/* ── Form controls ───────────────────────────────────────────────────────── */
+.form-control, .form-select {
+  font-size: 0.875rem;
+  border-color: #CBD5E1;
+  border-radius: 6px;
+  color: #1A2332;
+}
+.form-control:focus, .form-select:focus {
+  border-color: #00338D !important;
+  box-shadow: 0 0 0 3px rgba(0,51,141,0.12) !important;
+}
+.form-check-input:checked {
+  background-color: #00338D !important;
+  border-color: #00338D !important;
+}
+.form-label { font-size: 0.875rem; color: #374151; }
+/* Radio buttons */
+.form-check { margin-bottom: 0.2rem; }
+.form-check-label { font-size: 0.85rem; color: #374151; }
+
+
+/* ── Muted text ──────────────────────────────────────────────────────────── */
+.text-muted { color: #64748B !important; }
+.small, .text-sm { font-size: 0.8125rem !important; }
+
+
+/* ── Severity badges ─────────────────────────────────────────────────────── */
+.badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3em 0.65em;
+  border-radius: 4px;
+}
+.badge.bg-danger    { background-color: #DC2626 !important; color: #FFFFFF !important; }
+.badge.bg-warning   { background-color: #D97706 !important; color: #FFFFFF !important; }
+.badge.bg-info      { background-color: #0284C7 !important; color: #FFFFFF !important; }
+.badge.bg-success   { background-color: #16A34A !important; color: #FFFFFF !important; }
+.badge.bg-secondary { background-color: #64748B !important; color: #FFFFFF !important; }
+.badge.bg-primary   { background-color: #00338D !important; color: #FFFFFF !important; }
+
+
+/* ── Reactable tables ────────────────────────────────────────────────────── */
+.rt-thead .rt-th {
+  background-color: #F8FAFC !important;
+  color: #374151 !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid #E2EAF4 !important;
+}
+.rt-tr-striped { background-color: #F8FAFC !important; }
+.rt-tr-highlight:hover { background-color: #EFF6FF !important; }
+
+
+/* ── Verbatim / pre outputs ──────────────────────────────────────────────── */
+/* Narrative text (RLHF tab) */
+#narrative_display, .narrative-output {
+  font-size: 0.9rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background-color: #F8FAFC;
+  border: 1px solid #E2EAF4;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  color: #1A2332;
+  min-height: 120px;
+}
+/* Counterfactual & path viewer verbatim outputs */
+.shiny-text-output {
+  font-family: 'Menlo', 'Consolas', 'Courier New', monospace;
+  font-size: 0.78rem;
+  background-color: #1E293B;
+  color: #94A3B8;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 12px;
+  line-height: 1.6;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+
+/* ── Horizontal rules ────────────────────────────────────────────────────── */
+hr {
+  border-color: #E2EAF4;
+  opacity: 1;
+  margin: 1rem 0;
+}
+
+
+/* ── Accordion ───────────────────────────────────────────────────────────── */
+.accordion-button:not(.collapsed) {
+  background-color: #EFF6FF !important;
+  color: #00338D !important;
+  font-weight: 600;
+}
+.accordion-button {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+
+/* ── Status pill ─────────────────────────────────────────────────────────── */
+.status-pill {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  width: 100%;
+  text-align: center;
+  margin-top: 0.25rem;
+}
+
+
+/* ── Inline anomaly flag popover ─────────────────────────────────────────── */
+.flag-popover {
+  position: fixed;
+  background: #1A2332;
+  color: #FFFFFF;
+  border-radius: 6px;
+  padding: 5px 13px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 9999;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.28);
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: auto;
+  animation: flag-pop 0.12s ease-out;
+}
+.flag-popover:hover { background: #DC2626; }
+.flag-popover::after {
+  content: '';
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1A2332;
+}
+.flag-popover:hover::after { border-top-color: #DC2626; }
+@keyframes flag-pop {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+
+/* ── AI disclosure banner ────────────────────────────────────────────────── */
+.ai-disclosure {
+  background-color: #FEFCE8;
+  border-left: 3px solid #D97706;
+  border-radius: 0 6px 6px 0;
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+  color: #78350F;
+  margin-bottom: 1rem;
+}
+
+
+/* ── Right sidebar (Causal Explorer) — sky-blue theme ───────────────────── */
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar {
+  background-color: #0091DA !important;
+  color: #FFFFFF !important;
+  box-shadow: -2px 0 12px rgba(0,145,218,0.22);
+  border-left: none !important;
+  border-right: none !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar label,
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .form-label,
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar p,
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .small,
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar h5,
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar h6 {
+  color: rgba(255,255,255,0.9) !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .text-muted {
+  color: rgba(255,255,255,0.6) !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar hr {
+  border-color: rgba(255,255,255,0.2) !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .form-control,
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .form-select {
+  background-color: rgba(255,255,255,0.15) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+  color: #FFFFFF !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .form-control::placeholder {
+  color: rgba(255,255,255,0.45) !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .form-control:focus,
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .form-select:focus {
+  background-color: rgba(255,255,255,0.22) !important;
+  border-color: rgba(255,255,255,0.7) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.2) !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .selectize-input {
+  background-color: rgba(255,255,255,0.15) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+  color: #FFFFFF !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .selectize-input input,
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .selectize-input .item {
+  color: #FFFFFF !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .btn-primary {
+  background-color: #00338D !important;
+  border-color: #00338D !important;
+  color: #FFFFFF !important;
+  font-weight: 700;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .btn-primary:hover,
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .btn-primary:focus {
+  background-color: #002370 !important;
+  border-color: #002370 !important;
+  box-shadow: 0 0 0 3px rgba(0,51,141,0.35) !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .btn-outline-primary,
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .btn-outline-secondary {
+  color: #FFFFFF !important;
+  border-color: rgba(255,255,255,0.45) !important;
+  background-color: transparent !important;
+  font-weight: 600;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .btn-outline-primary:hover,
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .btn-outline-secondary:hover {
+  background-color: rgba(255,255,255,0.18) !important;
+  border-color: rgba(255,255,255,0.7) !important;
+  color: #FFFFFF !important;
+}
+/* Cards inside right sidebar: dark navy on sky-blue */
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .card {
+  background-color: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .card-header {
+  background-color: rgba(0,0,0,0.15) !important;
+  border-bottom-color: rgba(255,255,255,0.15) !important;
+}
+.bslib-sidebar-layout .bslib-sidebar-layout > .sidebar .shiny-text-output {
+  background-color: rgba(0,0,0,0.25) !important;
+  color: #E2EAF4 !important;
+  max-height: 140px;
+}
+
+
+/* ── Scrollbars ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F3F6FB; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
