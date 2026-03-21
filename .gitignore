@@ -28,3 +28,4 @@ Thumbs.db
 .env
 .Renviron
 *.tar.gz
+*.Rcheck/
