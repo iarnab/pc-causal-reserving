@@ -20,7 +20,6 @@ library(xml2)
 library(digest)
 library(httr2)
 library(jsonlite)
-library(anomalize)
 
 # Source all layer scripts
 source("R/layer_1_data/ingest_schedule_p.R")
