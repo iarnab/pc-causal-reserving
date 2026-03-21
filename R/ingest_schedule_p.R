@@ -242,6 +242,12 @@ compute_ata_factors <- function(triangle_df) {
     }
   ))
 
+  if (is.null(result)) {
+    return(data.frame(lob = character(), accident_year = integer(),
+                      from_lag = integer(), to_lag = integer(),
+                      ata_paid = numeric(), ata_incurred = numeric(),
+                      stringsAsFactors = FALSE))
+  }
   result[is.finite(result$ata_paid) & is.finite(result$ata_incurred), ]
 }
 

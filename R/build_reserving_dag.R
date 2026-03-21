@@ -34,10 +34,11 @@
 #'
 #' @return A dagitty DAG object.
 build_reserving_dag <- function() {
-  dag_spec <- paste(readLines(
-    system.file("dag/reserving_dag.txt", package = "actuarialcausalintelligence"),
-    warn = FALSE
-  ), collapse = "\n")
+  dag_file <- system.file("dag/reserving_dag.txt", package = "actuarialcausalintelligence")
+  if (!nzchar(dag_file)) {
+    dag_file <- file.path(here::here(), "inst", "dag", "reserving_dag.txt")
+  }
+  dag_spec <- paste(readLines(dag_file, warn = FALSE), collapse = "\n")
 
   # Strip comment lines (lines starting with #) before passing to dagitty
   dag_lines <- strsplit(dag_spec, "\n")[[1L]]
