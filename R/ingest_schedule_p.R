@@ -27,6 +27,8 @@
 #' @param db_path Character scalar: path to the SQLite database file.
 #' @return Invisible NULL.
 initialise_database <- function(db_path) {
+  db_dir <- dirname(db_path)
+  if (!dir.exists(db_dir)) dir.create(db_dir, recursive = TRUE)
   con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
   on.exit(DBI::dbDisconnect(con), add = TRUE)
 
