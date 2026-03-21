@@ -274,7 +274,7 @@ load_schedule_p_lob <- function(lob_code,
   # Ensure database exists and schema is initialised
   if (!file.exists(db_path)) {
     if (!exists("initialise_database", mode = "function")) {
-      source(file.path(dirname(sys.frame(1)$ofile %||% "R/layer_1_data"),
+      source(file.path(dirname(sys.frame(1)$ofile %||% "R"),
                        "ingest_schedule_p.R"))
     }
     initialise_database(db_path)
@@ -301,7 +301,7 @@ load_schedule_p_lob <- function(lob_code,
 
   # 5. Compute ATA factors (reuse function from ingest_schedule_p.R)
   if (!exists("compute_ata_factors", mode = "function")) {
-    source("R/layer_1_data/ingest_schedule_p.R")
+    source("R/ingest_schedule_p.R")
   }
   ata_df <- compute_ata_factors(df_company)
 
