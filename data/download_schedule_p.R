@@ -2,24 +2,33 @@
 # data/download_schedule_p.R
 # Download CAS Schedule P public dataset
 #
-# Downloads the CAS Research Working Party Schedule P dataset (1988-1997).
-# Workers Compensation (WC) is the primary demo LOB.
+# Downloads raw CAS Schedule P CSV files from the CAS website.
+# Primary LOB: OL (GL Occurrence / Other Liability – Occurrence).
 #
-# Usage: Rscript data/download_schedule_p.R
+# Skill reference: inst/skills/schedule_p_data.md
+#
+# Usage:
+#   Rscript data/download_schedule_p.R          # downloads OL (default)
+#   Rscript data/download_schedule_p.R WC       # downloads Workers Comp
+#   Rscript data/download_schedule_p.R OL WC    # downloads multiple LOBs
 # ==============================================================================
 
-options(timeout = 300)
+source("R/layer_1_data/load_schedule_p_raw.R")
 
 dest_dir <- "data/schedule_p"
-if (!dir.exists(dest_dir)) dir.create(dest_dir, recursive = TRUE)
 
-# CAS Schedule P data is available from the CAS website
-# Visit: https://www.casact.org/publications-research/research/research-resources/loss-reserving-data-pulled-naic-schedule-p
-# Download the CSV files manually and place them in data/schedule_p/
-# with the following naming convention: <LOB>_schedule_p.csv
+# LOBs to download: read from command-line args, default to OL
+args <- commandArgs(trailingOnly = TRUE)
+lobs <- if (length(args) > 0L) toupper(args) else "OL"
 
-cat("Schedule P data must be downloaded manually from the CAS website.\n")
-cat("URL: https://www.casact.org/publications-research/research/research-resources/loss-reserving-data-pulled-naic-schedule-p\n")
-cat("Place CSV files in: data/schedule_p/\n")
-cat("Required format: lob, accident_year, development_lag, cumulative_paid_loss,\n")
-cat("                 cumulative_incurred_loss, earned_premium\n")
+for (lob in lobs) {
+  tryCatch(
+    download_cas_csv(lob, dest_dir, force = FALSE),
+    error = function(e) message("ERROR for LOB ", lob, ": ", conditionMessage(e))
+  )
+}
+
+cat("\nDownload complete. Files are in:", dest_dir, "\n")
+cat("To load into SQLite, run:\n")
+cat("  source('R/layer_1_data/load_schedule_p_raw.R')\n")
+cat("  load_schedule_p_lob('OL', 'data/schedule_p', 'data/database/reserving.db')\n")
