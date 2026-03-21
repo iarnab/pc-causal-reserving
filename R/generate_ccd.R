@@ -64,7 +64,7 @@ build_ccd_xml <- function(causal_subgraph, anomaly_context, evidence_nodes,
   subgraph_el <- xml2::xml_add_child(doc, "CausalSubgraph")
   nodes_el    <- xml2::xml_add_child(subgraph_el, "Nodes")
   for (n in causal_subgraph$nodes) {
-    xml2::xml_add_child(nodes_el, "Node", xml2::xml_attr(n), n)
+    xml2::xml_add_child(nodes_el, "Node", n)
   }
   edges_el <- xml2::xml_add_child(subgraph_el, "Edges")
   if (nrow(causal_subgraph$edges) > 0L) {
