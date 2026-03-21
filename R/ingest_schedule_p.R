@@ -36,13 +36,15 @@ initialise_database <- function(db_path) {
     CREATE TABLE IF NOT EXISTS triangles (
       id                    INTEGER PRIMARY KEY AUTOINCREMENT,
       lob                   TEXT    NOT NULL,
+      grcode                INTEGER,
+      grname                TEXT,
       accident_year         INTEGER NOT NULL,
       development_lag       INTEGER NOT NULL,
       cumulative_paid_loss  REAL,
       cumulative_incurred_loss REAL,
       earned_premium        REAL,
       ingested_at           TEXT    DEFAULT (datetime('now')),
-      UNIQUE(lob, accident_year, development_lag)
+      UNIQUE(lob, grcode, accident_year, development_lag)
     )
   ")
 
@@ -50,13 +52,14 @@ initialise_database <- function(db_path) {
     CREATE TABLE IF NOT EXISTS ata_factors (
       id                INTEGER PRIMARY KEY AUTOINCREMENT,
       lob               TEXT    NOT NULL,
+      grcode            INTEGER,
       accident_year     INTEGER NOT NULL,
       from_lag          INTEGER NOT NULL,
       to_lag            INTEGER NOT NULL,
       ata_paid          REAL,
       ata_incurred      REAL,
       computed_at       TEXT    DEFAULT (datetime('now')),
-      UNIQUE(lob, accident_year, from_lag, to_lag)
+      UNIQUE(lob, grcode, accident_year, from_lag, to_lag)
     )
   ")
 
@@ -118,6 +121,96 @@ initialise_database <- function(db_path) {
       logged_at    TEXT    DEFAULT (datetime('now'))
     )
   ")
+
+  invisible(NULL)
+}
+
+
+# -- Schema migration ----------------------------------------------------------
+
+#' Migrate an existing database to the current schema
+#'
+#' Handles databases created before grcode was included in the UNIQUE
+#' constraints of triangles and ata_factors. Recreates affected tables in-place
+#' using the SQLite CREATE/INSERT/DROP/RENAME pattern.
+#'
+#' @param con DBI connection to the SQLite database.
+#' @return Invisible NULL.
+migrate_schema <- function(con) {
+  # Check triangles: does its UNIQUE constraint include grcode?
+  tri_sql <- tryCatch(
+    DBI::dbGetQuery(con,
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='triangles'"
+    )$sql[[1L]],
+    error = function(e) ""
+  )
+
+  if (nzchar(tri_sql) && !grepl("UNIQUE(lob, grcode", tri_sql, fixed = TRUE)) {
+    tri_cols <- DBI::dbListFields(con, "triangles")
+    col_list <- paste(intersect(
+      c("id","lob","grcode","grname","accident_year","development_lag",
+        "cumulative_paid_loss","cumulative_incurred_loss","earned_premium","ingested_at"),
+      tri_cols
+    ), collapse = ", ")
+    DBI::dbExecute(con, "
+      CREATE TABLE triangles_new (
+        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+        lob                   TEXT    NOT NULL,
+        grcode                INTEGER,
+        grname                TEXT,
+        accident_year         INTEGER NOT NULL,
+        development_lag       INTEGER NOT NULL,
+        cumulative_paid_loss  REAL,
+        cumulative_incurred_loss REAL,
+        earned_premium        REAL,
+        ingested_at           TEXT    DEFAULT (datetime('now')),
+        UNIQUE(lob, grcode, accident_year, development_lag)
+      )
+    ")
+    DBI::dbExecute(con, glue::glue(
+      "INSERT INTO triangles_new ({col_list}) SELECT {col_list} FROM triangles"
+    ))
+    DBI::dbExecute(con, "DROP TABLE triangles")
+    DBI::dbExecute(con, "ALTER TABLE triangles_new RENAME TO triangles")
+    message("migrate_schema: triangles rebuilt with grcode in UNIQUE constraint")
+  }
+
+  # Check ata_factors: does its UNIQUE constraint include grcode?
+  ata_sql <- tryCatch(
+    DBI::dbGetQuery(con,
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='ata_factors'"
+    )$sql[[1L]],
+    error = function(e) ""
+  )
+
+  if (nzchar(ata_sql) && !grepl("UNIQUE(lob, grcode", ata_sql, fixed = TRUE)) {
+    ata_cols <- DBI::dbListFields(con, "ata_factors")
+    col_list <- paste(intersect(
+      c("id","lob","grcode","accident_year","from_lag","to_lag",
+        "ata_paid","ata_incurred","computed_at"),
+      ata_cols
+    ), collapse = ", ")
+    DBI::dbExecute(con, "
+      CREATE TABLE ata_factors_new (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        lob           TEXT    NOT NULL,
+        grcode        INTEGER,
+        accident_year INTEGER NOT NULL,
+        from_lag      INTEGER NOT NULL,
+        to_lag        INTEGER NOT NULL,
+        ata_paid      REAL,
+        ata_incurred  REAL,
+        computed_at   TEXT    DEFAULT (datetime('now')),
+        UNIQUE(lob, grcode, accident_year, from_lag, to_lag)
+      )
+    ")
+    DBI::dbExecute(con, glue::glue(
+      "INSERT INTO ata_factors_new ({col_list}) SELECT {col_list} FROM ata_factors"
+    ))
+    DBI::dbExecute(con, "DROP TABLE ata_factors")
+    DBI::dbExecute(con, "ALTER TABLE ata_factors_new RENAME TO ata_factors")
+    message("migrate_schema: ata_factors rebuilt with grcode in UNIQUE constraint")
+  }
 
   invisible(NULL)
 }
