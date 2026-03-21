@@ -123,7 +123,7 @@ ui <- bslib::page_navbar(
     actionButton("run_analysis", "Run Analysis",
                  class = "btn-primary w-100 mt-2"),
     hr(),
-    helpText("Source: CAS Schedule P (1988–1997)")
+    helpText("Source: CAS Schedule P (1988\u20131997)")
   ),
 
   # ── Tab 1: Anomaly Overview ────────────────────────────────────────────────
@@ -190,7 +190,7 @@ ui <- bslib::page_navbar(
         )
       ),
       bslib::card(
-        bslib::card_header("Causal DAG — click a node to explore"),
+        bslib::card_header("Causal DAG \u2014 click a node to explore"),
         visNetwork::visNetworkOutput("dag_network", height = "520px")
       )
     )
@@ -212,10 +212,7 @@ ui <- bslib::page_navbar(
                        class = "btn-sm btn-outline-secondary")
         ),
         uiOutput("narrative_display"),
-        bslib::card_footer(
-          tags$small(class = "text-muted",
-            "CCD SHA-256: ", textOutput("ccd_sha256_display", inline = TRUE))
-        )
+        uiOutput("ccd_sha256_footer_ui")
       ),
       bslib::card(
         bslib::card_header("Actuary Rating"),
@@ -540,10 +537,13 @@ server <- function(input, output, session) {
     bslib::card_body(tags$p(narr))
   })
 
-  output$ccd_sha256_display <- renderText({
+  output$ccd_sha256_footer_ui <- renderUI({
     ccd <- ccd_xml_r()
-    if (is.null(ccd)) return("(not generated)")
-    substr(compute_sha256(ccd), 1L, 16L)
+    if (is.null(ccd)) return(NULL)
+    bslib::card_footer(
+      tags$small(class = "text-muted",
+        "CCD SHA-256: ", substr(compute_sha256(ccd), 1L, 16L))
+    )
   })
 
   observeEvent(input$submit_rating, {
