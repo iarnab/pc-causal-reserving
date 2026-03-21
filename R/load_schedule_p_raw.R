@@ -271,13 +271,16 @@ load_schedule_p_lob <- function(lob_code,
                                  grcode         = NULL,
                                  strategy       = "largest_premium",
                                  force_download = FALSE) {
-  # Ensure database exists and schema is initialised
+  # Ensure database exists, schema is initialised, and any old schema is migrated
   if (!file.exists(db_path)) {
     if (!exists("initialise_database", mode = "function")) {
       source(file.path(dirname(sys.frame(1)$ofile %||% "R"),
                        "ingest_schedule_p.R"))
     }
     initialise_database(db_path)
+  } else {
+    con_check <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+    tryCatch(migrate_schema(con_check), finally = DBI::dbDisconnect(con_check))
   }
 
   # 1. Download raw CSV

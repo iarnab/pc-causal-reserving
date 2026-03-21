@@ -29,8 +29,8 @@
 
 DB_PATH   <- "data/database/reserving.db"
 DATA_DIR  <- "data/schedule_p"
-AY_MIN    <- 1998L
-AY_MAX    <- 2007L
+AY_MIN    <- 1988L
+AY_MAX    <- 1997L
 LOB_CODES <- c("Workers Compensation"  = "WC",
                "Other Liability"       = "OL",
                "Product Liability"     = "PL",
