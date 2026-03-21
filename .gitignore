@@ -1,0 +1,29 @@
+# R artifacts
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# Data files (large / sensitive)
+data/schedule_p/*.csv
+data/schedule_p/*.xlsx
+data/database/*.db
+
+# Outputs
+output/
+proposal/*.docx
+
+# Logs
+*.log
+
+# Claude Code
+.claude/cache/
+.claude/sessions/
+
+# System
+.DS_Store
+Thumbs.db
+
+# API keys
+.env
+.Renviron

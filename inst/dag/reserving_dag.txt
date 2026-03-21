@@ -1,0 +1,153 @@
+# ==============================================================================
+# inst/dag/reserving_dag.txt
+# Canonical 5-Layer Causal DAG — P&C Loss Reserving (Workers Compensation)
+#
+# This file contains the dagitty DSL specification for the loss development
+# process causal graph. Load in R with:
+#   dag <- dagitty::dagitty(paste(readLines("inst/dag/reserving_dag.txt"), collapse="\n"))
+#
+# Causal story (layer by layer):
+#
+#   Layer 1 — Exogenous Shocks
+#     Macro and legislative drivers that are not themselves caused by
+#     insurance operations. These set the environment in which claims develop.
+#       gdp_growth:          Real GDP growth rate. Proxy for economic cycle.
+#       unemployment_rate:   U-3 unemployment. Drives WC claim frequency
+#                            (more employed workers = more exposure, but also
+#                            claims management pressure during downturns).
+#       tort_reform:         Binary/index for tort reform activity in a
+#                            calendar year. Affects severity via legal costs
+#                            and settlement behaviour.
+#       medical_cpi:         Medical Consumer Price Index growth. Primary
+#                            driver of average case value in WC.
+#
+#   Layer 2 — Exposure & Mix Shifts
+#     How macro conditions translate into insurance exposure.
+#       payroll_growth:      Payroll is the WC exposure base. Mediated by
+#                            GDP growth and labour market conditions.
+#       demographic_shift:   Workforce age/occupation mix changes.
+#                            Affects injury type and severity independently
+#                            of raw claim counts.
+#
+#   Layer 3 — Claim Frequency & Severity
+#     Proximate drivers of triangle diagonals.
+#       claim_frequency:     Reported claims per unit of payroll exposure.
+#                            Driven by unemployment rate and payroll growth.
+#       reported_claims:     Absolute reported claim count = frequency × exposure.
+#       avg_case_value:      Average case reserve at opening. Driven by
+#                            medical_cpi and demographic_shift.
+#       alae_ratio:          Allocated loss adjustment expense ratio.
+#                            Rises with legal environment (tort_reform).
+#
+#   Layer 4 — Case Reserve Adequacy
+#     Claims operations effects that cause development pattern deviations.
+#       case_reserve_opening: Opening case reserve level. Product of
+#                             reported_claims × avg_case_value.
+#       ibnr_emergence:       Incurred-but-not-reported emergence over the
+#                             development period. Driven by opening adequacy
+#                             and ALAE ratio.
+#
+#   Layer 5 — Development Factors & Ultimates
+#     What the triangle directly measures.
+#       development_factor:  Age-to-age factor for a given development period.
+#                            Determined by case reserve adequacy and IBNR.
+#       tail_factor:         Factor beyond the last observed development period.
+#       ultimate_loss:       Projected ultimate = sum of paid + IBNR.
+#       loss_ratio:          ultimate_loss / earned_premium.
+#
+# Edge justifications:
+#   gdp_growth -> payroll_growth
+#     Economic expansion drives payroll; recession contracts it. Elasticity
+#     ~0.8 based on Bureau of Labor Statistics historical data.
+#
+#   unemployment_rate -> claim_frequency
+#     Two competing effects: (1) fewer employed workers means less exposure,
+#     (2) higher unemployment increases incentive to file marginal claims.
+#     Net effect is positive on frequency for a given payroll unit.
+#
+#   tort_reform -> alae_ratio
+#     Tort reform reduces litigation costs and settlement awards, lowering
+#     ALAE per claim. CAS E-Forum literature documents this empirically.
+#
+#   medical_cpi -> avg_case_value
+#     WC medical benefits are the largest component of average case value.
+#     A 1% rise in medical CPI translates to ~0.6% rise in avg case value
+#     (medical component is ~60% of WC case value).
+#
+#   payroll_growth -> earned_premium
+#     WC premium is rated on payroll. Premium follows payroll with a ~12-month
+#     lag due to audit adjustment cycle.
+#
+#   payroll_growth -> reported_claims
+#     More payroll exposure → more workers → more claims, controlling for
+#     frequency rate.
+#
+#   demographic_shift -> avg_case_value
+#     Ageing workforce and shift to service sector changes injury mix,
+#     affecting average cost independently of medical inflation.
+#
+#   claim_frequency -> reported_claims
+#     Definitional: reported claims = frequency rate × payroll exposure.
+#
+#   avg_case_value -> case_reserve_opening
+#     Claims adjusters anchor opening case reserves to expected severity.
+#     Strong empirical relationship in Schedule P data.
+#
+#   alae_ratio -> ibnr_emergence
+#     Higher ALAE environments (pre-tort-reform) are associated with longer
+#     claim tails, driving IBNR emergence in later development periods.
+#
+#   reported_claims -> case_reserve_opening
+#     More claims means higher aggregate case reserve, all else equal.
+#
+#   case_reserve_opening -> development_factor
+#     The primary causal driver of ATA factors. Under-reserved claims develop
+#     more (higher ATA factor); adequately reserved claims develop less.
+#
+#   case_reserve_opening -> ibnr_emergence
+#     Under-reserved opening positions are associated with more IBNR emergence
+#     as claims develop to ultimate.
+#
+#   ibnr_emergence -> ultimate_loss
+#     Ultimate = paid + IBNR. IBNR emergence directly determines the ultimate.
+#
+#   development_factor -> ultimate_loss
+#     Chain-ladder estimate: ultimate = latest diagonal × product of future ATAs.
+#
+#   tail_factor -> ultimate_loss
+#     Tail factor applies beyond the last development period. WC has a long
+#     tail; tail factor selection significantly affects ultimate.
+#
+#   ultimate_loss -> loss_ratio
+#     Definitional: loss ratio = ultimate / premium.
+#
+# ==============================================================================
+
+dag {
+  # Layer 1: Exogenous Shocks -> Layer 2: Exposure
+  gdp_growth          -> payroll_growth
+  unemployment_rate   -> claim_frequency
+  tort_reform         -> alae_ratio
+  medical_cpi         -> avg_case_value
+
+  # Layer 2: Exposure -> Layer 3: Claim frequency & severity
+  payroll_growth      -> earned_premium
+  payroll_growth      -> reported_claims
+  demographic_shift   -> avg_case_value
+
+  # Layer 3: Claim frequency & severity -> Layer 4: Reserve adequacy
+  claim_frequency     -> reported_claims
+  reported_claims     -> case_reserve_opening
+  avg_case_value      -> case_reserve_opening
+  alae_ratio          -> ibnr_emergence
+
+  # Layer 4: Reserve adequacy -> Layer 5: Development factors
+  case_reserve_opening -> development_factor
+  case_reserve_opening -> ibnr_emergence
+  ibnr_emergence       -> ultimate_loss
+
+  # Layer 5: Development factors -> Ultimates
+  development_factor  -> ultimate_loss
+  tail_factor         -> ultimate_loss
+  ultimate_loss       -> loss_ratio
+}

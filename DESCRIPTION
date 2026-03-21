@@ -1,0 +1,41 @@
+Package: actuarialcausalintelligence
+Type: Package
+Title: Causal Intelligence for P&C Loss Reserving
+Version: 0.1.0
+Authors@R: person("Arnab", "Gupta", role = c("aut", "cre"),
+    email = "arnab.gupta@example.com")
+Description: Five-module pipeline grounding LLM reserve narratives in explicit
+    causal structure via do-calculus and Causal Context Documents (CCD).
+    Developed for the CAS 2026 RFP: Adapting Large Language Models for
+    Specialized P&C Actuarial Reasoning. Workers Compensation / Schedule P.
+License: MPL-2.0
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+    dagitty,
+    bnlearn,
+    anomalize,
+    httr2,
+    jsonlite,
+    DBI,
+    RSQLite,
+    dplyr,
+    tidyr,
+    purrr,
+    stringr,
+    glue,
+    here,
+    shiny,
+    bslib,
+    visNetwork,
+    plotly,
+    reactable,
+    digest,
+    xml2,
+    openxlsx
+Suggests:
+    testthat (>= 3.0.0),
+    assertthat
+Config/testthat/edition: 3
