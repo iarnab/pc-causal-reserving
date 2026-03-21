@@ -50,6 +50,23 @@ test_that("detect_diagonal_effect returns a data.frame with required fields", {
   expect_true(all(c("lob","from_lag","coefficient","p_value","direction","flagged") %in% names(result)))
 })
 
+test_that("combine_anomaly_signals returns columned data.frame when both inputs are empty", {
+  # Regression test: analysis_r() used to return data.frame() (0 columns) when
+  # ata_df had 0 rows, causing reactable::reactable() to throw
+  # "data must have at least one column".
+  empty_z <- data.frame(lob=character(), accident_year=integer(), development_lag=integer(),
+                        rule_id=character(), severity=character(), observed=numeric(),
+                        expected=numeric(), message=character(), stringsAsFactors=FALSE)
+  empty_d <- data.frame(lob=character(), from_lag=integer(), coefficient=numeric(),
+                        p_value=numeric(), direction=character(), flagged=logical(),
+                        stringsAsFactors=FALSE)
+  result <- combine_anomaly_signals(empty_z, empty_d)
+  expect_true(is.data.frame(result))
+  expect_equal(nrow(result), 0L)
+  expect_true(all(c("lob","accident_year","development_lag","rule_id",
+                    "severity","observed","expected","message") %in% names(result)))
+})
+
 test_that("combine_anomaly_signals deduplicates correctly", {
   z_flags <- data.frame(
     lob = "WC", accident_year = 1993L, development_lag = 2L,
