@@ -361,7 +361,12 @@ server <- function(input, output, session) {
        AND accident_year BETWEEN {input$ay_range[1]} AND {input$ay_range[2]}"
     ))
 
-    if (nrow(ata_df) == 0L) return(list(ata_df = ata_df, anomalies = data.frame()))
+    empty_anomalies <- data.frame(
+      lob=character(), accident_year=integer(), development_lag=integer(),
+      rule_id=character(), severity=character(), observed=numeric(),
+      expected=numeric(), message=character(), stringsAsFactors=FALSE
+    )
+    if (nrow(ata_df) == 0L) return(list(ata_df = ata_df, anomalies = empty_anomalies))
 
     zscore_flags <- detect_ata_zscore(ata_df, z_threshold = input$z_threshold)
     diag_flags   <- detect_diagonal_effect(tri_df)
