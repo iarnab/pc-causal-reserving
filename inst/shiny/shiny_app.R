@@ -90,8 +90,22 @@ build_dag_visnetwork <- function(dag, flagged_nodes = character(0L)) {
 # ── UI ─────────────────────────────────────────────────────────────────────────
 
 ui <- bslib::page_navbar(
-  title = "P&C Causal Reserving",
-  theme = bslib::bs_theme(version = 5, bootswatch = "flatly"),
+  title = tags$a(
+    class = "navbar-brand pc-brand-text",
+    tags$span(class = "pc-title",    "P&C Reserving"),
+    tags$span(class = "pc-subtitle", "Causal Intelligence Platform")
+  ),
+  theme  = bslib::bs_theme(
+    version    = 5,
+    bootswatch = "flatly",
+    primary    = "#00338D",
+    success    = "#43B02A",
+    danger     = "#DC2626",
+    info       = "#0091DA"
+  ),
+  header = tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+  ),
   sidebar = bslib::sidebar(
     width = 260,
     selectInput("lob", "Line of Business",
@@ -109,7 +123,7 @@ ui <- bslib::page_navbar(
     actionButton("run_analysis", "Run Analysis",
                  class = "btn-primary w-100 mt-2"),
     hr(),
-    helpText("Source: CAS Schedule P (1998-2007)")
+    helpText("Source: CAS Schedule P (1988–1997)")
   ),
 
   # ── Tab 1: Anomaly Overview ────────────────────────────────────────────────
