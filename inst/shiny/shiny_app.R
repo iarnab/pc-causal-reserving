@@ -28,6 +28,9 @@
 # ── Constants ──────────────────────────────────────────────────────────────────
 
 DB_PATH   <- "data/database/reserving.db"
+DATA_DIR  <- "data/schedule_p"
+AY_MIN    <- 1998L
+AY_MAX    <- 2007L
 LOB_CODES <- c("WC" = "Workers Compensation",
                "CMP" = "Commercial Multi-Peril",
                "OL"  = "Other Liability",
@@ -89,18 +92,23 @@ ui <- bslib::page_navbar(
   title = "P&C Causal Reserving",
   theme = bslib::bs_theme(version = 5, bootswatch = "flatly"),
   sidebar = bslib::sidebar(
-    width = 220,
+    width = 260,
     selectInput("lob", "Line of Business",
-                choices = LOB_CODES, selected = "WC"),
+                choices = LOB_CODES, selected = "OL"),
+    uiOutput("company_selector_ui"),
+    actionButton("load_data", "Load / Refresh Data",
+                 class = "btn-outline-secondary w-100 mt-1"),
+    uiOutput("load_status_ui"),
+    hr(),
     sliderInput("ay_range", "Accident Years",
-                min = 1988L, max = 1997L, value = c(1988L, 1997L), step = 1L,
-                sep = ""),
+                min = AY_MIN, max = AY_MAX,
+                value = c(AY_MIN, AY_MAX), step = 1L, sep = ""),
     numericInput("z_threshold", "Z-score threshold",
                  value = 2.5, min = 1.0, max = 5.0, step = 0.5),
     actionButton("run_analysis", "Run Analysis",
                  class = "btn-primary w-100 mt-2"),
     hr(),
-    helpText("Source: CAS Schedule P (1988-1997)")
+    helpText("Source: CAS Schedule P (1998-2007)")
   ),
 
   # ── Tab 1: Anomaly Overview ────────────────────────────────────────────────
@@ -178,7 +186,7 @@ ui <- bslib::page_navbar(
     title = "RLHF Review",
     icon  = shiny::icon("star-half-stroke"),
     selectInput("review_ay", "Accident Year:",
-                choices = 1988:1997, selected = 1993L, width = "200px"),
+                choices = AY_MIN:AY_MAX, selected = 2003L, width = "200px"),
     bslib::layout_columns(
       col_widths = c(6, 6),
       bslib::card(
@@ -231,22 +239,124 @@ ui <- bslib::page_navbar(
 
 server <- function(input, output, session) {
 
+  # -- Reactive values: loaded company state -----------------------------------
+  loaded_company_r <- reactiveVal(NULL)   # list from load_schedule_p_lob()
+  companies_df_r   <- reactiveVal(NULL)   # data.frame from list_schedule_p_companies()
+
+  # -- Sidebar: company selector (shown after first load) ----------------------
+  output$company_selector_ui <- renderUI({
+    comps <- companies_df_r()
+    if (is.null(comps)) return(helpText("Click \"Load / Refresh Data\" to download data."))
+    choices <- setNames(
+      as.character(comps$grcode),
+      glue::glue("{comps$grname} (#{comps$grcode})")
+    )
+    selectInput("grcode_select", "Company",
+                choices  = choices,
+                selected = as.character(loaded_company_r()$grcode))
+  })
+
+  output$load_status_ui <- renderUI({
+    co <- loaded_company_r()
+    if (is.null(co)) return(NULL)
+    tags$small(class = "text-success",
+      shiny::icon("circle-check"), " ", co$grname, tags$br(),
+      glue::glue("{co$n_triangle_rows} triangle rows loaded")
+    )
+  })
+
+  # -- Observer: Load / Refresh Data button ------------------------------------
+  observeEvent(input$load_data, {
+    lob <- input$lob
+    withProgress(message = glue::glue("Loading {lob} data\u2026"), value = 0.1, {
+      if (!file.exists(DB_PATH)) {
+        tryCatch(initialise_database(DB_PATH),
+                 error = function(e) {
+                   shiny::showNotification(conditionMessage(e), type = "error")
+                   return()
+                 })
+      }
+      setProgress(0.3)
+
+      comps <- tryCatch(
+        list_schedule_p_companies(lob, DATA_DIR),
+        error = function(e) {
+          shiny::showNotification(
+            glue::glue("Could not list companies: {conditionMessage(e)}"),
+            type = "error", duration = 8
+          )
+          NULL
+        }
+      )
+      if (is.null(comps)) return()
+      companies_df_r(comps)
+      setProgress(0.6)
+
+      # Use currently selected grcode if available, else largest by premium
+      grcode_to_load <- if (!is.null(input$grcode_select) && nzchar(input$grcode_select))
+                          as.integer(input$grcode_select)
+                        else NULL
+
+      result <- tryCatch(
+        load_schedule_p_lob(lob, DATA_DIR, DB_PATH, grcode = grcode_to_load),
+        error = function(e) {
+          shiny::showNotification(
+            glue::glue("Load failed: {conditionMessage(e)}"),
+            type = "error", duration = 8
+          )
+          NULL
+        }
+      )
+      if (is.null(result)) return()
+      loaded_company_r(result)
+      setProgress(1.0)
+      shiny::showNotification(
+        glue::glue("Loaded: {result$grname} \u2014 {result$n_triangle_rows} rows"),
+        type = "message", duration = 4
+      )
+    })
+  })
+
+  # -- Observer: switch company ------------------------------------------------
+  observeEvent(input$grcode_select, {
+    co <- loaded_company_r()
+    req(!is.null(co))
+    req(as.integer(input$grcode_select) != co$grcode)
+    withProgress(message = "Switching company\u2026", {
+      result <- tryCatch(
+        load_schedule_p_lob(input$lob, DATA_DIR, DB_PATH,
+                            grcode = as.integer(input$grcode_select)),
+        error = function(e) {
+          shiny::showNotification(conditionMessage(e), type = "error"); NULL
+        }
+      )
+      if (!is.null(result)) {
+        loaded_company_r(result)
+        shiny::showNotification(
+          glue::glue("Switched to: {result$grname}"), type = "message", duration = 3
+        )
+      }
+    })
+  }, ignoreInit = TRUE)
+
   # -- Reactive: build DAG once ------------------------------------------------
   dag_r <- reactive({ build_reserving_dag() })
 
   # -- Reactive: load data and run analysis on button click --------------------
   analysis_r <- eventReactive(input$run_analysis, {
     req(file.exists(DB_PATH))
+    req(!is.null(loaded_company_r()))
+    co  <- loaded_company_r()
     con <- DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
     on.exit(DBI::dbDisconnect(con), add = TRUE)
 
     ata_df <- DBI::dbGetQuery(con, glue::glue(
-      "SELECT * FROM ata_factors WHERE lob = '{input$lob}'
+      "SELECT * FROM ata_factors WHERE lob = '{input$lob}' AND grcode = {co$grcode}
        AND accident_year BETWEEN {input$ay_range[1]} AND {input$ay_range[2]}"
     ))
 
     tri_df <- DBI::dbGetQuery(con, glue::glue(
-      "SELECT * FROM triangles WHERE lob = '{input$lob}'
+      "SELECT * FROM triangles WHERE lob = '{input$lob}' AND grcode = {co$grcode}
        AND accident_year BETWEEN {input$ay_range[1]} AND {input$ay_range[2]}"
     ))
 

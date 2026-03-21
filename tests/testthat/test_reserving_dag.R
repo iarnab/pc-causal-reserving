@@ -6,7 +6,7 @@ test_that("build_reserving_dag returns a dagitty object", {
 test_that("all 5 layers have at least one node in the DAG", {
   dag   <- build_reserving_dag()
   nodes <- get_reserving_dag_nodes()
-  dag_node_names <- names(dagitty::coordinates(dag))
+  dag_node_names <- names(dagitty::coordinates(dag)$x)
 
   for (layer in names(nodes)) {
     layer_nodes <- nodes[[layer]]

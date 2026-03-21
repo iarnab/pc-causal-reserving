@@ -27,3 +27,5 @@ Thumbs.db
 # API keys
 .env
 .Renviron
+*.tar.gz
+*.Rcheck/

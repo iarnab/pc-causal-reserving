@@ -10,13 +10,10 @@ Description: Five-module pipeline grounding LLM reserve narratives in explicit
     Specialized P&C Actuarial Reasoning. Workers Compensation / Schedule P.
 License: MPL-2.0
 Encoding: UTF-8
-LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports:
     dagitty,
-    bnlearn,
-    anomalize,
     httr2,
     jsonlite,
     DBI,
@@ -25,6 +22,7 @@ Imports:
     tidyr,
     purrr,
     stringr,
+    readr,
     glue,
     here,
     shiny,
@@ -36,6 +34,5 @@ Imports:
     xml2,
     openxlsx
 Suggests:
-    testthat (>= 3.0.0),
-    assertthat
+    testthat (>= 3.0.0)
 Config/testthat/edition: 3

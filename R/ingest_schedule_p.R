@@ -242,6 +242,12 @@ compute_ata_factors <- function(triangle_df) {
     }
   ))
 
+  if (is.null(result)) {
+    return(data.frame(lob = character(), accident_year = integer(),
+                      from_lag = integer(), to_lag = integer(),
+                      ata_paid = numeric(), ata_incurred = numeric(),
+                      stringsAsFactors = FALSE))
+  }
   result[is.finite(result$ata_paid) & is.finite(result$ata_incurred), ]
 }
 
@@ -268,7 +274,7 @@ ingest_schedule_p <- function(data_dir, db_path,
   on.exit(DBI::dbDisconnect(con), add = TRUE)
 
   triangle_df <- DBI::dbGetQuery(con, glue::glue(
-    "SELECT * FROM triangles WHERE lob IN ({paste(shQuote(lines), collapse=',')}"
+    "SELECT * FROM triangles WHERE lob IN ({paste(shQuote(lines), collapse=',')})"
   ))
 
   if (!is.null(force_years)) {
