@@ -183,11 +183,10 @@ ui <- bslib::page_navbar(
       col_widths = c(6, 6),
       bslib::card(
         bslib::card_header(
+          class = "d-flex justify-content-between align-items-center",
           "Reserve Narrative",
-          bslib::card_header_buttons(
-            actionButton("regenerate_narrative", "Regenerate",
-                         class = "btn-sm btn-outline-secondary")
-          )
+          actionButton("regenerate_narrative", "Regenerate",
+                       class = "btn-sm btn-outline-secondary")
         ),
         uiOutput("narrative_display"),
         bslib::card_footer(

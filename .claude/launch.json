@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "shiny-causal-reserving",
+      "runtimeExecutable": "Rscript",
+      "runtimeArgs": ["-e", "shiny::runApp('app.R', port=7775, launch.browser=FALSE)"],
+      "port": 7775
+    }
+  ]
+}
