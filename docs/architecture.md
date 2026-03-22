@@ -70,6 +70,7 @@ Schedule P (CSV/Excel)
 │  KPMG System Card: layer5_system_card.R (70/30)     │
 │  SQLite: audit_log, narrative_approvals              │
 │  Tabs: Anomaly Overview | Causal Explorer | RLHF    │
+│        | System Card | Audit Trail                  │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -152,7 +153,7 @@ agents/
 
 ## KPMG Trusted AI System Card
 
-`R/layer_5_observability/system_card.R` implements a **70/30 composite** scoring
+`R/layer5_system_card.R` implements a **70/30 composite** scoring
 framework across 5 governance pillars:
 
 | Pillar | Automated Metric (70%) | Human Attestation (30%) |
@@ -165,6 +166,25 @@ framework across 5 governance pillars:
 
 Attestation scores recorded via `record_attestation(con, pillar, score, attested_by)`.
 Full card via `compute_system_card(con)`.
+
+---
+
+## Slash Commands (`.claude/commands/`)
+
+19 Claude Code slash commands expose the full pipeline as interactive skills:
+
+| Layer | Commands |
+|-------|----------|
+| Layer 1 — Data Ingestion | `/validate-input`, `/ingest-lob`, `/repair-triangle` |
+| Layer 2 — Anomaly Detection | `/scan-anomalies`, `/tune-thresholds`, `/explain-flag` |
+| Layer 3 — Causal Reasoning | `/trace-anomaly`, `/build-ccd`, `/explain-dag` |
+| Layer 4 — AI Narrative | `/draft-narrative`, `/review-narrative`, `/flag-for-approval` |
+| Layer 5 / Orchestrator | `/run-pipeline`, `/pipeline-status`, `/retry-layer` |
+| Cross-cutting | `/health-check`, `/audit-trail`, `/reset-pipeline`, `/system-card-report` |
+
+Each command documents: pre-conditions, step-by-step execution logic, SQL queries,
+expected output, and next-step suggestions. API calls are restricted to Layer 4
+commands only; `temperature=0` is enforced.
 
 ---
 

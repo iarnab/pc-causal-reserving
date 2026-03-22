@@ -27,26 +27,32 @@ Schedule P (CSV)
       |
       v
 Layer 1: Data Ingestion (R / SQLite)
-  parse_triangle_csv() --> build_development_triangles() --> compute_ata_factors()
+  load_schedule_p_raw() --> ingest_schedule_p() --> compute_ata_factors()
+  SQLite: triangles, ata_factors
       |
       v
-Layer 2: Anomaly Detection (anomalize)
+Layer 2: Anomaly Detection (Z-score + diagonal regression)
   detect_ata_zscore() --> detect_diagonal_effect() --> combine_anomaly_signals()
+  SQLite: anomaly_flags
       |
       v
-Layer 3: Causal DAG (dagitty / bnlearn)
-  build_reserving_dag() --> query_do_calculus() --> get_dag_paths()
+Layer 3: Causal Reasoning (dagitty / xml2)
+  build_reserving_dag() --> query_do_calculus() --> generate_ccd() --> register_ccd()
+  SQLite: causal_context_docs
       |
       v
-Layer 4: CCD Generator (xml2 / digest)
-  generate_ccd() --> build_ccd_xml() --> compute_sha256() --> register_ccd()
-      |
-      v
-Layer 5: LLM Synthesis (Claude API / httr2)
+Layer 4: AI Synthesis (Claude API / httr2)   ← ONLY layer calling external APIs
+  build_reserve_narrative_prompt() --> call_claude() [temperature=0]
   synthesize_reserve_narrative() --> collect_rlhf_feedback()
+  SQLite: narrative_registry
       |
       v
-Shiny Dashboard (3 tabs: Anomaly Overview | Causal Explorer | RLHF Review)
+Layer 5: Observability (Shiny + KPMG System Card)
+  inst/shiny/shiny_app.R + layer5_system_card.R
+  SQLite: audit_log, narrative_approvals, system_card_attestations
+      |
+      v
+Shiny Dashboard (5 tabs: Anomaly Overview | Causal Explorer | RLHF Review | System Card | Audit Trail)
 ```
 
 ---
@@ -97,11 +103,26 @@ shiny::runApp("app.R")
 
 | Layer | File | Key Functions |
 |-------|------|---------------|
-| 1: Data Ingestion | `R/layer_1_data/ingest_schedule_p.R` | `ingest_schedule_p()`, `compute_ata_factors()`, `initialise_database()` |
-| 2: Anomaly Detection | `R/layer_2_anomaly/detect_triangle_anomalies.R` | `detect_ata_zscore()`, `detect_diagonal_effect()` |
-| 3: Causal DAG | `R/layer_3_causal/build_reserving_dag.R` | `build_reserving_dag()`, `query_do_calculus()`, `get_dag_paths()` |
-| 4: CCD Generator | `R/layer_4_ccd/generate_ccd.R` | `generate_ccd()`, `build_ccd_xml()`, `compute_sha256()` |
-| 5: LLM Synthesis | `R/layer_5_llm/synthesize_reserve_narrative.R` | `synthesize_reserve_narrative()`, `collect_rlhf_feedback()` |
+| 1: Data Ingestion | `R/layer1_ingest_schedule_p.R`, `R/layer1_load_schedule_p_raw.R` | `ingest_schedule_p()`, `compute_ata_factors()`, `initialise_database()`, `load_schedule_p_lob()` |
+| 2: Anomaly Detection | `R/layer2_detect_triangle_anomalies.R` | `detect_ata_zscore()`, `detect_diagonal_effect()`, `combine_anomaly_signals()` |
+| 3: Causal Reasoning | `R/layer3_build_reserving_dag.R`, `R/layer3_generate_ccd.R` | `build_reserving_dag()`, `query_do_calculus()`, `get_dag_paths()`, `generate_ccd()`, `compute_sha256()` |
+| 4: AI Synthesis | `R/layer4_claude_client.R`, `R/layer4_synthesize_reserve_narrative.R` | `call_claude()`, `synthesize_reserve_narrative()`, `collect_rlhf_feedback()` |
+| 5: Observability | `R/layer5_system_card.R` | `compute_system_card()`, `record_attestation()` |
+
+---
+
+## Slash Commands
+
+19 Claude Code slash commands in `.claude/commands/` cover the full pipeline:
+
+| Layer | Commands |
+|-------|----------|
+| Layer 1 — Data Ingestion | `/validate-input`, `/ingest-lob`, `/repair-triangle` |
+| Layer 2 — Anomaly Detection | `/scan-anomalies`, `/tune-thresholds`, `/explain-flag` |
+| Layer 3 — Causal Reasoning | `/trace-anomaly`, `/build-ccd`, `/explain-dag` |
+| Layer 4 — AI Narrative | `/draft-narrative`, `/review-narrative`, `/flag-for-approval` |
+| Layer 5 / Orchestrator | `/run-pipeline`, `/pipeline-status`, `/retry-layer` |
+| Cross-cutting | `/health-check`, `/audit-trail`, `/reset-pipeline`, `/system-card-report` |
 
 ---
 
