@@ -88,7 +88,8 @@ test_that("download_cas_csv creates dest_dir if absent", {
   on.exit(unlink(new_dir, recursive = TRUE), add = TRUE)
   meta <- lob_metadata("WC")
   dest <- file.path(new_dir, meta$filename)
-  writeLines("x", dest)   # pre-seed after creating dir for cache-hit test
+  dir.create(new_dir, recursive = TRUE, showWarnings = FALSE)
+  writeLines("x", dest)   # pre-seed for cache-hit path
   # Calling with an already-created dir should not error
   expect_no_error(download_cas_csv("WC", new_dir, force = FALSE))
 })
@@ -121,8 +122,7 @@ test_that("parse_cas_csv works for all 6 supported LOBs", {
     tmp <- tempfile(fileext = ".csv")
     on.exit(unlink(tmp), add = TRUE)
     make_cas_csv(tmp, code, n_companies = 1L, rows_per_company = 10L)
-    expect_no_error(parse_cas_csv(tmp, code),
-                    info = glue::glue("parse_cas_csv failed for LOB {code}"))
+    expect_no_error(parse_cas_csv(tmp, code))
   }
 })
 

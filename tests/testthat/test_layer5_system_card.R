@@ -57,14 +57,17 @@ test_that(".score_data_integrity awards points for triangles, CCD, narrative", {
   con <- make_con()
   on.exit(DBI::dbDisconnect(con))
 
-  # Seed 1000 triangle rows (max completeness = 40 pts)
-  tri_df <- data.frame(
-    lob = "WC", grcode = 100L, grname = "TestCo",
-    accident_year = rep(1988L:1997L, each = 100L),
-    development_lag = rep(1L:10L, times = 100L),
-    cumulative_paid_loss = 100, cumulative_incurred_loss = 110, earned_premium = 500,
-    stringsAsFactors = FALSE
-  )
+  # Seed 1000 triangle rows across 10 grcodes (max completeness = 40 pts)
+  # 10 grcodes x 10 accident_years x 10 development_lags = 1000 unique rows
+  tri_df <- do.call(rbind, lapply(seq_len(10L), function(gc) {
+    data.frame(
+      lob = "WC", grcode = gc, grname = paste0("Co", gc),
+      accident_year   = rep(1988L:1997L, times = 10L),
+      development_lag = rep(1L:10L,      each  = 10L),
+      cumulative_paid_loss = 100, cumulative_incurred_loss = 110, earned_premium = 500,
+      stringsAsFactors = FALSE
+    )
+  }))
   DBI::dbWriteTable(con, "triangles", tri_df, append = TRUE)
 
   # Seed 1 CCD (40 pts) and 1 narrative (20 pts)
@@ -246,8 +249,7 @@ test_that("record_attestation accepts all valid pillar names", {
   pillars <- c("data_integrity", "transparency", "explainability",
                 "accountability", "reliability")
   for (p in pillars) {
-    expect_no_error(record_attestation(con, p, 75),
-                    info = glue::glue("record_attestation failed for pillar '{p}'"))
+    expect_no_error(record_attestation(con, p, 75))
   }
 })
 
