@@ -110,15 +110,19 @@ initialise_database <- function(db_path) {
 
   DBI::dbExecute(con, "
     CREATE TABLE IF NOT EXISTS audit_log (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      event_type   TEXT    NOT NULL,
-      lob          TEXT,
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_type    TEXT    NOT NULL,
+      layer         TEXT,
+      status        TEXT,
+      details       TEXT,
+      lob           TEXT,
       accident_year INTEGER,
       prompt_sha256 TEXT,
-      model        TEXT,
-      tokens_used  INTEGER,
-      duration_ms  INTEGER,
-      logged_at    TEXT    DEFAULT (datetime('now'))
+      model         TEXT,
+      tokens_used   INTEGER,
+      duration_ms   INTEGER,
+      created_at    TEXT    DEFAULT (datetime('now')),
+      logged_at     TEXT    DEFAULT (datetime('now'))
     )
   ")
 
@@ -210,6 +214,29 @@ migrate_schema <- function(con) {
     DBI::dbExecute(con, "DROP TABLE ata_factors")
     DBI::dbExecute(con, "ALTER TABLE ata_factors_new RENAME TO ata_factors")
     message("migrate_schema: ata_factors rebuilt with grcode in UNIQUE constraint")
+  }
+
+  # Add missing audit_log columns for databases created before this migration
+  audit_cols <- tryCatch(
+    DBI::dbGetQuery(con, "PRAGMA table_info(audit_log)")$name,
+    error = function(e) character(0)
+  )
+  if (length(audit_cols) > 0L) {
+    new_cols <- list(
+      layer      = "TEXT",
+      status     = "TEXT",
+      details    = "TEXT",
+      created_at = "TEXT DEFAULT (datetime('now'))"
+    )
+    for (col in names(new_cols)) {
+      if (!col %in% audit_cols) {
+        DBI::dbExecute(
+          con,
+          glue::glue("ALTER TABLE audit_log ADD COLUMN {col} {new_cols[[col]]}")
+        )
+        message(glue::glue("migrate_schema: added audit_log.{col}"))
+      }
+    }
   }
 
   invisible(NULL)
