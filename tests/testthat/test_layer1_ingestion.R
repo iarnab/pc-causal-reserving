@@ -176,3 +176,82 @@ test_that("compute_ata_factors returns zero rows for single-period triangle", {
   ata <- compute_ata_factors(df)
   expect_equal(nrow(ata), 0L)
 })
+
+# -- build_development_triangles -----------------------------------------------
+
+test_that("build_development_triangles ingests CSVs and returns row count", {
+  db      <- tempfile(fileext = ".db")
+  data_dir <- tempdir()
+  on.exit(unlink(db))
+
+  initialise_database(db)
+
+  csv_path <- file.path(data_dir, "test_wc.csv")
+  writeLines(
+    paste0(
+      "lob,accident_year,development_lag,",
+      "cumulative_paid_loss,cumulative_incurred_loss,earned_premium\n",
+      "WC,1988,1,100,120,500\n",
+      "WC,1988,2,150,170,500\n",
+      "WC,1989,1,200,220,600"
+    ),
+    csv_path
+  )
+  on.exit(unlink(csv_path), add = TRUE)
+
+  n <- build_development_triangles(data_dir, db, lines = "WC")
+  expect_equal(n, 3L)
+
+  con  <- DBI::dbConnect(RSQLite::SQLite(), db)
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+  stored <- DBI::dbGetQuery(con, "SELECT COUNT(*) AS n FROM triangles")$n
+  expect_equal(stored, 3L)
+})
+
+test_that("build_development_triangles returns 0 for empty directory", {
+  db       <- tempfile(fileext = ".db")
+  empty_dir <- tempfile()
+  dir.create(empty_dir)
+  on.exit({ unlink(db); unlink(empty_dir, recursive = TRUE) })
+  initialise_database(db)
+  n <- build_development_triangles(empty_dir, db)
+  expect_equal(n, 0L)
+})
+
+test_that("build_development_triangles skips CSVs for non-requested LOBs", {
+  db       <- tempfile(fileext = ".db")
+  data_dir <- tempfile()
+  dir.create(data_dir)
+  on.exit({ unlink(db); unlink(data_dir, recursive = TRUE) })
+
+  initialise_database(db)
+  csv_path <- file.path(data_dir, "mixed.csv")
+  writeLines(
+    paste0(
+      "lob,accident_year,development_lag,",
+      "cumulative_paid_loss,cumulative_incurred_loss,earned_premium\n",
+      "WC,1988,1,100,120,500\n",
+      "OL,1988,1,200,220,600"
+    ),
+    csv_path
+  )
+
+  n <- build_development_triangles(data_dir, db, lines = "WC")
+  expect_equal(n, 1L)  # OL row filtered out
+})
+
+test_that("build_development_triangles skips malformed CSVs with a warning", {
+  db       <- tempfile(fileext = ".db")
+  data_dir <- tempfile()
+  dir.create(data_dir)
+  on.exit({ unlink(db); unlink(data_dir, recursive = TRUE) })
+
+  initialise_database(db)
+  writeLines("bad,columns\n1,2", file.path(data_dir, "bad.csv"))
+
+  expect_warning(
+    n <- build_development_triangles(data_dir, db),
+    regexp = NULL   # any warning is acceptable
+  )
+  expect_equal(n, 0L)
+})
