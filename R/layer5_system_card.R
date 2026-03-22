@@ -111,7 +111,7 @@ initialise_system_card_schema <- function(con) {
   n_ccd_with_paths <- tryCatch({
     DBI::dbGetQuery(con,
       "SELECT COUNT(*) AS n FROM causal_context_docs
-       WHERE xml_content LIKE '%<active_paths>%'")$n
+       WHERE ccd_xml LIKE '%<active_paths>%'")$n
   }, error = function(e) 0L)
 
   n_ccd_total <- DBI::dbGetQuery(con,
@@ -137,7 +137,7 @@ initialise_system_card_schema <- function(con) {
   n_rated <- tryCatch({
     DBI::dbGetQuery(con,
       "SELECT COUNT(*) AS n FROM narrative_registry
-       WHERE rlhf_rating IS NOT NULL")$n
+       WHERE rating_accuracy IS NOT NULL")$n
   }, error = function(e) 0L)
 
   n_approved <- tryCatch({
