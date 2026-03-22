@@ -28,7 +28,7 @@ Layer organisation is enforced through **file naming prefixes** (`layerN_`).
 | **2 — Anomaly** | `R/layer2_*.R` | Z-score flagging; diagonal regression; combine signals |
 | **3 — Causal** | `R/layer3_*.R` | DAG construction; do-calculus queries; CCD XML generation |
 | **4 — AI** | `R/layer4_*.R` | Claude API wrapper; prompt builders; RLHF feedback |
-| **5 — Observability** | `R/layer5_*.R` | Shiny dashboard; KPMG System Card; audit trail |
+| **5 — Observability** | `R/layer5_*.R` | Shiny dashboard (5 tabs); KPMG System Card; audit trail |
 
 > **Note**: Using subdirectories inside `R/` is not supported by R CMD build/check —
 > `devtools::load_all()` and R CMD check only read `.R` files at the top level of `R/`.
@@ -50,19 +50,19 @@ Layer organisation is enforced through **file naming prefixes** (`layerN_`).
 - **Pipe**: Always use `|>` (base pipe, R ≥ 4.1). Never use `%>%`
 - **Dependencies**: Never use `library()` in sourced scripts. Use `box::use()` or declare at entry point (`app.R`)
 - **Paths**: Always use `here::here()` or relative paths. Never hardcode absolute paths
-- **Functions**: Keep short, single-purpose. Extract helpers to `R/layer_N/utils.R`
+- **Functions**: Keep short, single-purpose. Extract helpers to `R/layerN_utils.R`
 - **DAGs**: Every `dagitty` DAG must have a comment block explaining the causal story and economic rationale
 
 ### Claude API
 - Always use `temperature = 0` for deterministic, reproducible outputs (regulatory requirement)
 - System prompt must include CCD content when available
 - API key from `.Renviron` only (`ANTHROPIC_API_KEY`). Never hardcode
-- All API calls belong in `R/layer_4_ai/` only
+- All API calls belong in `R/layer4_*.R` files only
 
 ### Database
 - All writes must be idempotent (check before insert; `INSERT OR REPLACE`)
 - Schema migrations in `ingest_schedule_p.R::migrate_schema()` — must be replayable
-- Tables: `triangles`, `ata_factors`, `anomaly_flags`, `causal_context_docs`, `narrative_registry`, `audit_log`
+- Tables: `triangles`, `ata_factors`, `anomaly_flags`, `causal_context_docs`, `narrative_registry`, `audit_log`, `narrative_approvals`, `system_card_attestations`
 
 ---
 
@@ -151,12 +151,15 @@ MCP servers registered in `.mcp.json`:
 | File | Purpose |
 |------|---------|
 | `app.R` | Shiny entrypoint — sources all layers |
-| `inst/shiny/shiny_app.R` | Full dashboard (800+ lines) |
+| `inst/shiny/shiny_app.R` | Full dashboard (5 tabs) |
 | `inst/dag/reserving_dag.txt` | Canonical dagitty DAG spec |
 | `data-raw/README.md` | Data ingestion instructions |
 | `R/layer5_system_card.R` | KPMG Trusted AI System Card |
 | `tests/testthat/` | All tests |
 | `.github/workflows/R-CMD-check.yaml` | CI/CD |
+| `.claude/commands/` | 19 slash command skills (all layers) |
+| `agents/run_pipeline.py` | Multi-agent sequential execution guard |
+| `docs/architecture.md` | Full system architecture reference |
 
 ---
 
@@ -174,7 +177,7 @@ MCP servers registered in `.mcp.json`:
 
 ## Governance
 
-The KPMG Trusted AI System Card (`R/layer_5_observability/system_card.R`) scores
+The KPMG Trusted AI System Card (`R/layer5_system_card.R`) scores
 the system across 5 pillars using a **70/30 composite**:
 - 70% automated metrics (derived from DB)
 - 30% human attestation (stored in `system_card_attestations` table)

@@ -14,20 +14,20 @@
 #   shiny, bslib, visNetwork, plotly, reactable, DBI, RSQLite, dplyr, glue
 #
 # Functions used from other layers (sourced by app.R):
-#   build_reserving_dag()              R/layer_3_causal/build_reserving_dag.R
-#   query_do_calculus()                R/layer_3_causal/build_reserving_dag.R
-#   get_dag_paths()                    R/layer_3_causal/build_reserving_dag.R
-#   get_reserving_dag_nodes()          R/layer_3_causal/build_reserving_dag.R
-#   synthesize_reserve_narrative()     R/layer_5_llm/synthesize_reserve_narrative.R
-#   collect_rlhf_feedback()            R/layer_5_llm/synthesize_reserve_narrative.R
-#   generate_ccd()                     R/layer_4_ccd/generate_ccd.R
-#   compute_sha256()                   R/layer_4_ccd/generate_ccd.R
+#   build_reserving_dag()              R/layer3_build_reserving_dag.R
+#   query_do_calculus()                R/layer3_build_reserving_dag.R
+#   get_dag_paths()                    R/layer3_build_reserving_dag.R
+#   get_reserving_dag_nodes()          R/layer3_build_reserving_dag.R
+#   synthesize_reserve_narrative()     R/layer4_synthesize_reserve_narrative.R
+#   collect_rlhf_feedback()            R/layer4_synthesize_reserve_narrative.R
+#   generate_ccd()                     R/layer3_generate_ccd.R
+#   compute_sha256()                   R/layer3_generate_ccd.R
 # ==============================================================================
 
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
-DB_PATH   <- "data/database/reserving.db"
+DB_PATH   <- "data/database/causal_reserving.db"
 DATA_DIR  <- "data/schedule_p"
 AY_MIN    <- 1988L
 AY_MAX    <- 1997L
@@ -123,6 +123,7 @@ ui <- bslib::page_navbar(
     actionButton("run_analysis", "Run Analysis",
                  class = "btn-primary w-100 mt-2"),
     hr(),
+    uiOutput("pipeline_status_ui"),
     helpText("Source: CAS Schedule P (1988\u20131997)")
   ),
 
@@ -156,6 +157,10 @@ ui <- bslib::page_navbar(
         bslib::value_box(
           title = "Warnings", value = textOutput("n_warnings"),
           showcase = shiny::icon("triangle-exclamation"), theme = "warning"
+        ),
+        bslib::value_box(
+          title = "Info", value = textOutput("n_info"),
+          showcase = shiny::icon("circle-info"), theme = "info"
         )
       )
     )
@@ -196,12 +201,12 @@ ui <- bslib::page_navbar(
     )
   ),
 
-  # ── Tab 3: RLHF Review ─────────────────────────────────────────────────────
+  # ── Tab 3: RLHF Review (positioned before System Card + Audit Trail) ───────
   bslib::nav_panel(
     title = "RLHF Review",
     icon  = shiny::icon("star-half-stroke"),
     selectInput("review_ay", "Accident Year:",
-                choices = AY_MIN:AY_MAX, selected = 2003L, width = "200px"),
+                choices = AY_MIN:AY_MAX, selected = AY_MAX, width = "200px"),
     bslib::layout_columns(
       col_widths = c(6, 6),
       bslib::card(
@@ -236,12 +241,71 @@ ui <- bslib::page_navbar(
                      inline = TRUE),
         textAreaInput("reviewer_notes", "Notes:", rows = 3),
         actionButton("submit_rating", "Submit Rating",
-                     class = "btn-success w-100")
+                     class = "btn-success w-100"),
+        hr(),
+        tags$p(class = "text-muted mb-1", tags$small("Narrative Approval")),
+        bslib::layout_columns(
+          col_widths = c(6, 6),
+          actionButton("approve_narrative", "Approve",
+                       class = "btn-outline-success w-100",
+                       icon  = shiny::icon("check")),
+          actionButton("reject_narrative", "Reject",
+                       class = "btn-outline-danger w-100",
+                       icon  = shiny::icon("xmark"))
+        ),
+        uiOutput("approval_status_ui")
       )
     ),
     bslib::card(
       bslib::card_header("Rating History"),
       reactable::reactableOutput("rating_history_table")
+    )
+  ),
+
+  # ── Tab 4: System Card ─────────────────────────────────────────────────────
+  bslib::nav_panel(
+    title = "System Card",
+    icon  = shiny::icon("shield-halved"),
+    bslib::layout_columns(
+      col_widths = c(4, 8),
+      bslib::value_box(
+        title    = "Overall Composite Score",
+        value    = textOutput("system_card_overall"),
+        showcase = shiny::icon("gauge-high"),
+        theme    = "primary"
+      ),
+      bslib::card(
+        bslib::card_header(
+          class = "d-flex justify-content-between align-items-center",
+          "KPMG Trusted AI \u2014 5 Pillars (70% Automated / 30% Human)",
+          actionButton("refresh_system_card", "Refresh",
+                       class = "btn-sm btn-outline-secondary",
+                       icon  = shiny::icon("rotate"))
+        ),
+        reactable::reactableOutput("system_card_table")
+      )
+    )
+  ),
+
+  # ── Tab 5: Audit Trail ─────────────────────────────────────────────────────
+  bslib::nav_panel(
+    title = "Audit Trail",
+    icon  = shiny::icon("clock-rotate-left"),
+    bslib::layout_columns(
+      col_widths = c(3, 3, 3, 3),
+      selectInput("audit_lob",   "LOB",   choices = c("All", unname(LOB_CODES)), selected = "All"),
+      selectInput("audit_layer", "Layer", choices = c("All", paste0("layer", 1:5)),  selected = "All"),
+      selectInput("audit_event", "Event", choices = c("All", "ingest", "anomaly_scan",
+                                                       "ccd_build", "narrative_generate",
+                                                       "narrative_approve", "narrative_reject"),
+                  selected = "All"),
+      actionButton("refresh_audit", "Refresh",
+                   class = "btn-outline-secondary w-100 mt-4",
+                   icon  = shiny::icon("rotate"))
+    ),
+    bslib::card(
+      bslib::card_header("Audit Log"),
+      reactable::reactableOutput("audit_table")
     )
   )
 )
@@ -595,6 +659,214 @@ server <- function(input, output, session) {
     ))
     reactable::reactable(hist_df, sortable = TRUE, striped = TRUE,
                          defaultPageSize = 10)
+  })
+
+  # -- Tab 1: Info value box ---------------------------------------------------
+  output$n_info <- renderText({
+    sum(analysis_r()$anomalies$severity == "info", na.rm = TRUE)
+  })
+
+  # -- Sidebar: pipeline status badges ----------------------------------------
+  output$pipeline_status_ui <- renderUI({
+    if (!file.exists(DB_PATH)) return(NULL)
+    con <- DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
+    on.exit(DBI::dbDisconnect(con), add = TRUE)
+    if (!DBI::dbExistsTable(con, "audit_log")) return(NULL)
+
+    layers <- paste0("layer", 1:5)
+    statuses <- vapply(layers, function(lyr) {
+      row <- DBI::dbGetQuery(con, glue::glue(
+        "SELECT status FROM audit_log WHERE layer = '{lyr}'
+         ORDER BY created_at DESC LIMIT 1"
+      ))
+      if (nrow(row) == 0L) "pending" else row$status[[1L]]
+    }, character(1L))
+
+    badge_class <- function(s) switch(s,
+      "success" = "bg-success", "error" = "bg-danger", "bg-secondary")
+
+    tagList(
+      tags$p(class = "text-muted mb-1", tags$small("Pipeline Status")),
+      tags$div(
+        lapply(seq_along(layers), function(i) {
+          tags$span(
+            class = glue::glue("badge {badge_class(statuses[[i]])} me-1 mb-1"),
+            glue::glue("L{i}")
+          )
+        })
+      ),
+      tags$hr()
+    )
+  })
+
+  # -- Tab 3: Approval workflow ------------------------------------------------
+  approval_status_r <- reactiveVal(NULL)
+
+  observeEvent(input$approve_narrative, {
+    req(!is.null(narrative_r()))
+    narrative_id <- glue::glue(
+      "{input$lob}_{input$review_ay}_{input$reviewer_id}_{as.integer(Sys.time())}"
+    )
+    tryCatch({
+      if (file.exists(DB_PATH)) {
+        con <- DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
+        on.exit(DBI::dbDisconnect(con), add = TRUE)
+        if (DBI::dbExistsTable(con, "narrative_approvals")) {
+          DBI::dbExecute(con, glue::glue(
+            "INSERT OR REPLACE INTO narrative_approvals
+             (narrative_id, decision, reviewer, rejection_reason, created_at)
+             VALUES ('{narrative_id}', 'approved', '{input$reviewer_id}', NULL,
+                     datetime('now'))"
+          ))
+        }
+        if (DBI::dbExistsTable(con, "audit_log")) {
+          DBI::dbExecute(con, glue::glue(
+            "INSERT INTO audit_log (event_type, layer, status, details, created_at)
+             VALUES ('narrative_approve', 'layer4', 'success',
+                     'lob={input$lob} ay={input$review_ay}', datetime('now'))"
+          ))
+        }
+      }
+      approval_status_r("approved")
+      shiny::showNotification("Narrative approved.", type = "message", duration = 3)
+    }, error = function(e) {
+      shiny::showNotification(conditionMessage(e), type = "error")
+    })
+  })
+
+  observeEvent(input$reject_narrative, {
+    req(!is.null(narrative_r()))
+    shiny::showModal(shiny::modalDialog(
+      title = "Reject Narrative",
+      textAreaInput("rejection_reason_modal", "Reason for rejection:", rows = 3),
+      footer = tagList(
+        shiny::modalButton("Cancel"),
+        actionButton("confirm_rejection", "Confirm Rejection", class = "btn-danger")
+      )
+    ))
+  })
+
+  observeEvent(input$confirm_rejection, {
+    shiny::removeModal()
+    narrative_id <- glue::glue(
+      "{input$lob}_{input$review_ay}_{input$reviewer_id}_{as.integer(Sys.time())}"
+    )
+    reason <- input$rejection_reason_modal %||% ""
+    tryCatch({
+      if (file.exists(DB_PATH)) {
+        con <- DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
+        on.exit(DBI::dbDisconnect(con), add = TRUE)
+        if (DBI::dbExistsTable(con, "narrative_approvals")) {
+          DBI::dbExecute(con, glue::glue(
+            "INSERT OR REPLACE INTO narrative_approvals
+             (narrative_id, decision, reviewer, rejection_reason, created_at)
+             VALUES ('{narrative_id}', 'rejected', '{input$reviewer_id}',
+                     '{reason}', datetime('now'))"
+          ))
+        }
+        if (DBI::dbExistsTable(con, "audit_log")) {
+          DBI::dbExecute(con, glue::glue(
+            "INSERT INTO audit_log (event_type, layer, status, details, created_at)
+             VALUES ('narrative_reject', 'layer4', 'success',
+                     'lob={input$lob} ay={input$review_ay}', datetime('now'))"
+          ))
+        }
+      }
+      approval_status_r("rejected")
+      shiny::showNotification("Narrative rejected.", type = "warning", duration = 3)
+    }, error = function(e) {
+      shiny::showNotification(conditionMessage(e), type = "error")
+    })
+  })
+
+  output$approval_status_ui <- renderUI({
+    status <- approval_status_r()
+    if (is.null(status)) return(NULL)
+    cls <- if (status == "approved") "text-success" else "text-danger"
+    icon_name <- if (status == "approved") "circle-check" else "circle-xmark"
+    tags$small(class = glue::glue("{cls} mt-1 d-block"),
+      shiny::icon(icon_name), " Narrative ", status)
+  })
+
+  # -- Tab 4: System Card ------------------------------------------------------
+  system_card_r <- eventReactive(
+    list(input$refresh_system_card, input$run_analysis),
+    {
+      req(file.exists(DB_PATH))
+      con <- DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
+      on.exit(DBI::dbDisconnect(con), add = TRUE)
+      tryCatch(compute_system_card(con), error = function(e) NULL)
+    },
+    ignoreNULL = FALSE
+  )
+
+  output$system_card_overall <- renderText({
+    sc <- system_card_r()
+    if (is.null(sc)) return("N/A")
+    overall <- sc$overall_composite %||% sc$composite_score %||% NA_real_
+    if (is.na(overall)) "N/A" else glue::glue("{round(overall * 100, 1)}%")
+  })
+
+  output$system_card_table <- reactable::renderReactable({
+    sc <- system_card_r()
+    if (is.null(sc)) {
+      return(reactable::reactable(
+        data.frame(Pillar = character(), Automated = character(),
+                   Human = character(), Composite = character()),
+        striped = TRUE
+      ))
+    }
+    df <- if (is.data.frame(sc)) sc else sc$pillars
+    reactable::reactable(df, striped = TRUE, sortable = TRUE,
+                         defaultPageSize = 5)
+  })
+
+  # -- Tab 5: Audit Trail ------------------------------------------------------
+  output$audit_table <- reactable::renderReactable({
+    input$refresh_audit  # invalidate on refresh
+    req(file.exists(DB_PATH))
+    con <- DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
+    on.exit(DBI::dbDisconnect(con), add = TRUE)
+    if (!DBI::dbExistsTable(con, "audit_log")) {
+      return(reactable::reactable(
+        data.frame(event_type=character(), layer=character(),
+                   status=character(), details=character(), created_at=character()),
+        striped = TRUE
+      ))
+    }
+
+    where_clauses <- character(0L)
+    if (!is.null(input$audit_lob)   && input$audit_lob   != "All")
+      where_clauses <- c(where_clauses, glue::glue("details LIKE '%lob={input$audit_lob}%'"))
+    if (!is.null(input$audit_layer) && input$audit_layer != "All")
+      where_clauses <- c(where_clauses, glue::glue("layer = '{input$audit_layer}'"))
+    if (!is.null(input$audit_event) && input$audit_event != "All")
+      where_clauses <- c(where_clauses, glue::glue("event_type = '{input$audit_event}'"))
+
+    where_sql <- if (length(where_clauses) > 0L)
+      paste("WHERE", paste(where_clauses, collapse = " AND "))
+    else ""
+
+    audit_df <- DBI::dbGetQuery(con, glue::glue(
+      "SELECT event_type, layer, status, details, created_at
+       FROM audit_log {where_sql}
+       ORDER BY created_at DESC LIMIT 200"
+    ))
+
+    reactable::reactable(
+      audit_df,
+      filterable = TRUE, sortable = TRUE, striped = TRUE,
+      defaultPageSize = 15,
+      columns = list(
+        status = reactable::colDef(
+          cell = function(value) {
+            cls <- switch(value,
+              "success" = "bg-success", "error" = "bg-danger", "bg-secondary")
+            shiny::tags$span(class = glue::glue("badge {cls}"), value)
+          }
+        )
+      )
+    )
   })
 }
 
