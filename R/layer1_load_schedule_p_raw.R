@@ -196,7 +196,7 @@ select_company <- function(df, grcode = NULL, strategy = "largest_premium") {
       totals       <- tapply(eligible_df$earned_premium, eligible_df$grcode, sum, na.rm = TRUE)
       selected_code <- as.integer(names(which.max(totals)))
     } else if (strategy == "most_complete") {
-      selected_code <- as.integer(names(which.max(row_counts[eligible_codes])))
+      selected_code <- as.integer(names(which.max(row_counts[as.character(eligible_codes)])))
     } else {
       stop(glue::glue("Unknown strategy '{strategy}'. Use 'largest_premium' or 'most_complete'."))
     }
