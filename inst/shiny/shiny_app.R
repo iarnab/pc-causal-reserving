@@ -217,7 +217,32 @@ ui <- bslib::page_navbar(
                        class = "btn-sm btn-outline-secondary")
         ),
         uiOutput("narrative_display"),
-        uiOutput("ccd_sha256_footer_ui")
+        uiOutput("ccd_sha256_footer_ui"),
+        bslib::card_body(
+          tags$hr(),
+          tags$label(
+            class = "form-label fw-semibold",
+            shiny::icon("pen-to-square"), " Actuarial Feedback (editable)"
+          ),
+          tags$p(
+            class = "text-muted small mb-2",
+            "Edit the narrative below before submitting your rating.",
+            "Your edits are saved with the RLHF record."
+          ),
+          textAreaInput(
+            inputId = "actuarial_feedback",
+            label   = NULL,
+            value   = "",
+            rows    = 10,
+            width   = "100%",
+            resize  = "vertical"
+          ),
+          actionButton(
+            "reset_feedback", "Reset to Generated",
+            class = "btn-sm btn-outline-secondary mt-1",
+            icon  = shiny::icon("rotate-left")
+          )
+        )
       ),
       bslib::card(
         bslib::card_header("Actuary Rating"),
@@ -598,7 +623,23 @@ server <- function(input, output, session) {
   output$narrative_display <- renderUI({
     narr <- narrative_r()
     if (is.null(narr)) return(helpText("Run Analysis to generate a narrative."))
-    bslib::card_body(tags$p(narr))
+    # Render markdown: ## headings, **bold**, horizontal rules
+    bslib::card_body(
+      style = "overflow-y: auto; max-height: 480px;",
+      shiny::markdown(narr)
+    )
+  })
+
+  # Pre-fill actuarial_feedback textarea whenever a new narrative is generated
+  observeEvent(narrative_r(), {
+    req(!is.null(narrative_r()))
+    updateTextAreaInput(session, "actuarial_feedback", value = narrative_r())
+  })
+
+  # Reset edited feedback to the latest generated narrative
+  observeEvent(input$reset_feedback, {
+    req(!is.null(narrative_r()))
+    updateTextAreaInput(session, "actuarial_feedback", value = narrative_r())
   })
 
   output$ccd_sha256_footer_ui <- renderUI({
@@ -623,7 +664,7 @@ server <- function(input, output, session) {
         lob            = input$lob,
         accident_year  = as.integer(input$review_ay),
         ccd_sha256     = compute_sha256(ccd_xml_r()),
-        narrative_text = narrative_r(),
+        narrative_text = if (nzchar(trimws(input$actuarial_feedback))) input$actuarial_feedback else narrative_r(),
         ratings        = list(
           accuracy      = as.integer(input$rating_accuracy),
           coherence     = as.integer(input$rating_coherence),
