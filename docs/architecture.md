@@ -29,7 +29,7 @@ Schedule P (CSV/Excel)
       │
       ▼
 ┌─────────────────────────────────────────────────────┐
-│ Layer 1: Data Ingestion (R/layer_1_data/)           │
+│ Layer 1: Data Ingestion (R/layer1_*.R)              │
 │  load_schedule_p_raw() → ingest_schedule_p()        │
 │  parse_triangle_csv() → build_development_triangles()│
 │  compute_ata_factors()                               │
@@ -38,7 +38,7 @@ Schedule P (CSV/Excel)
                        │ SQLite
                        ▼
 ┌─────────────────────────────────────────────────────┐
-│ Layer 2: Anomaly Detection (R/layer_2_anomaly/)     │
+│ Layer 2: Anomaly Detection (R/layer2_*.R)           │
 │  detect_ata_zscore() → detect_diagonal_effect()     │
 │  combine_anomaly_signals()                           │
 │  Thresholds: inst/validation_rules.yaml             │
@@ -47,7 +47,7 @@ Schedule P (CSV/Excel)
                        │ SQLite
                        ▼
 ┌─────────────────────────────────────────────────────┐
-│ Layer 3: Causal Reasoning (R/layer_3_causal/)       │
+│ Layer 3: Causal Reasoning (R/layer3_*.R)            │
 │  build_reserving_dag() → query_do_calculus()        │
 │  get_dag_paths() → generate_ccd() → register_ccd() │
 │  DAG spec: inst/dag/reserving_dag.txt               │
@@ -56,7 +56,7 @@ Schedule P (CSV/Excel)
                        │ SQLite
                        ▼
 ┌─────────────────────────────────────────────────────┐
-│ Layer 4: AI Synthesis (R/layer_4_ai/)               │
+│ Layer 4: AI Synthesis (R/layer4_*.R)                │
 │  ONLY layer allowed to call external APIs            │
 │  build_reserve_narrative_prompt() → call_claude()   │
 │  synthesize_reserve_narrative() [temperature = 0]   │
@@ -65,9 +65,9 @@ Schedule P (CSV/Excel)
                        │ SQLite
                        ▼
 ┌─────────────────────────────────────────────────────┐
-│ Layer 5: Observability (R/layer_5_observability/)   │
+│ Layer 5: Observability (R/layer5_*.R)               │
 │  Shiny dashboard: inst/shiny/shiny_app.R            │
-│  KPMG System Card: system_card.R (70/30 composite)  │
+│  KPMG System Card: layer5_system_card.R (70/30)     │
 │  SQLite: audit_log, narrative_approvals              │
 │  Tabs: Anomaly Overview | Causal Explorer | RLHF    │
 └─────────────────────────────────────────────────────┘

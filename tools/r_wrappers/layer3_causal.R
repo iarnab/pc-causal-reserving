@@ -12,8 +12,8 @@ db_path <- args$db_path
 lob     <- args[["lob"]]
 
 tryCatch({
-  source(here::here("R/layer_3_causal/build_reserving_dag.R"))
-  source(here::here("R/layer_3_causal/generate_ccd.R"))
+  source(here::here("R/layer3_build_reserving_dag.R"))
+  source(here::here("R/layer3_generate_ccd.R"))
 
   result <- run_causal_pipeline(
     db_path = db_path,

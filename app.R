@@ -22,13 +22,13 @@ library(httr2)
 library(jsonlite)
 
 # Source all layer scripts
-source("R/layer_1_data/ingest_schedule_p.R")
-source("R/layer_1_data/load_schedule_p_raw.R")
-source("R/layer_2_anomaly/detect_triangle_anomalies.R")
-source("R/layer_3_causal/build_reserving_dag.R")
-source("R/layer_3_causal/generate_ccd.R")
-source("R/layer_4_ai/claude_client.R")
-source("R/layer_4_ai/synthesize_reserve_narrative.R")
+source("R/layer1_ingest_schedule_p.R")
+source("R/layer1_load_schedule_p_raw.R")
+source("R/layer2_detect_triangle_anomalies.R")
+source("R/layer3_build_reserving_dag.R")
+source("R/layer3_generate_ccd.R")
+source("R/layer4_claude_client.R")
+source("R/layer4_synthesize_reserve_narrative.R")
 
 # Source the Shiny UI and server
 source("inst/shiny/shiny_app.R")

@@ -15,8 +15,8 @@ lob            <- args[["lob"]]
 max_narratives <- args[["max_narratives"]] %||% 5L
 
 tryCatch({
-  source(here::here("R/layer_4_ai/claude_client.R"))
-  source(here::here("R/layer_4_ai/synthesize_reserve_narrative.R"))
+  source(here::here("R/layer4_claude_client.R"))
+  source(here::here("R/layer4_synthesize_reserve_narrative.R"))
 
   result <- synthesize_reserve_narrative(
     db_path        = db_path,

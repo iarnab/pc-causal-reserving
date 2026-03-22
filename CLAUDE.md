@@ -19,13 +19,19 @@ Data source: CAS Schedule P (Workers Compensation, 1988–1997, 10 companies).
 
 ## 5-Layer Architecture
 
-| Layer | Directory | Responsibility |
-|-------|-----------|----------------|
-| **1 — Data** | `R/layer_1_data/` | Ingest Schedule P CSV/Excel → SQLite; build triangles; compute ATA factors |
-| **2 — Anomaly** | `R/layer_2_anomaly/` | Z-score flagging; diagonal regression; combine signals |
-| **3 — Causal** | `R/layer_3_causal/` | DAG construction; do-calculus queries; CCD XML generation |
-| **4 — AI** | `R/layer_4_ai/` | Claude API wrapper; prompt builders; RLHF feedback |
-| **5 — Observability** | `R/layer_5_observability/` | Shiny dashboard; KPMG System Card; audit trail |
+R packages require all source files to be **directly** inside `R/` (no subdirectories).
+Layer organisation is enforced through **file naming prefixes** (`layerN_`).
+
+| Layer | File prefix | Responsibility |
+|-------|-------------|----------------|
+| **1 — Data** | `R/layer1_*.R` | Ingest Schedule P CSV/Excel → SQLite; build triangles; compute ATA factors |
+| **2 — Anomaly** | `R/layer2_*.R` | Z-score flagging; diagonal regression; combine signals |
+| **3 — Causal** | `R/layer3_*.R` | DAG construction; do-calculus queries; CCD XML generation |
+| **4 — AI** | `R/layer4_*.R` | Claude API wrapper; prompt builders; RLHF feedback |
+| **5 — Observability** | `R/layer5_*.R` | Shiny dashboard; KPMG System Card; audit trail |
+
+> **Note**: Using subdirectories inside `R/` is not supported by R CMD build/check —
+> `devtools::load_all()` and R CMD check only read `.R` files at the top level of `R/`.
 
 ### Layer Constraints (STRICT)
 
@@ -33,7 +39,7 @@ Data source: CAS Schedule P (Workers Compensation, 1988–1997, 10 companies).
 - **Layer 4** is the ONLY layer allowed to call the Anthropic API
 - Cross-layer communication is exclusively via the **SQLite database** (`data/database/causal_reserving.db`)
 - Never import functions from a higher layer into a lower layer
-- Each layer directory may have a `utils.R` file for shared internal helpers
+- Shared helpers within a layer go in a `layerN_utils.R` file
 
 ---
 
@@ -148,7 +154,7 @@ MCP servers registered in `.mcp.json`:
 | `inst/shiny/shiny_app.R` | Full dashboard (800+ lines) |
 | `inst/dag/reserving_dag.txt` | Canonical dagitty DAG spec |
 | `data-raw/README.md` | Data ingestion instructions |
-| `R/layer_5_observability/system_card.R` | KPMG Trusted AI System Card |
+| `R/layer5_system_card.R` | KPMG Trusted AI System Card |
 | `tests/testthat/` | All tests |
 | `.github/workflows/R-CMD-check.yaml` | CI/CD |
 

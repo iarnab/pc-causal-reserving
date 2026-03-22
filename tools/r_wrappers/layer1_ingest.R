@@ -13,8 +13,8 @@ file_path <- args[["file_path"]]
 lob       <- args[["lob"]]     # may be NULL
 
 tryCatch({
-  source(here::here("R/layer_1_data/ingest_schedule_p.R"))
-  source(here::here("R/layer_1_data/load_schedule_p_raw.R"))
+  source(here::here("R/layer1_ingest_schedule_p.R"))
+  source(here::here("R/layer1_load_schedule_p_raw.R"))
 
   result <- ingest_schedule_p(
     file_path = file_path,

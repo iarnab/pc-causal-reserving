@@ -15,7 +15,7 @@ z_threshold <- args[["z_threshold"]] %||% 3.0
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
 tryCatch({
-  source(here::here("R/layer_2_anomaly/detect_triangle_anomalies.R"))
+  source(here::here("R/layer2_detect_triangle_anomalies.R"))
 
   result <- detect_all_anomalies(
     db_path     = db_path,
