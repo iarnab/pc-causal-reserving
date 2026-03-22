@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "sqlite": {
+      "command": "uvx",
+      "args": ["mcp-server-sqlite", "--db-path", "data/database/causal_reserving.db"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "env": {
+        "ALLOWED_PATHS": "R,inst,tests,agents,tools,docs,data-raw"
+      }
+    },
+    "pipeline": {
+      "command": "python",
+      "args": ["tools/mcp_pipeline.py"],
+      "env": {
+        "REPO_ROOT": "."
+      }
+    }
+  }
+}

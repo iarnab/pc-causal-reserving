@@ -1,0 +1,152 @@
+# ==============================================================================
+# inst/validation_rules.yaml
+# Anomaly Detection Rule Thresholds
+#
+# Defines rule definitions, thresholds, tolerance bands, and CAS benchmark
+# references for the Layer 2 anomaly detection pipeline.
+#
+# Severity levels:
+#   error   — hard stop; flag requires actuary review before narrative generation
+#   warning — soft flag; included in CCD but does not block narrative
+#   info    — logged for audit trail only
+#
+# References: CAS E-Forum, Schedule P Data Specifications
+# ==============================================================================
+
+rules:
+
+  # --- ATA Z-score rules ------------------------------------------------------
+
+  - id: R1
+    name: ata_zscore_high
+    description: >
+      Age-to-age factor deviates more than z_threshold standard deviations from
+      the column mean. Indicates an unusual development period for the LOB.
+    severity: error
+    threshold:
+      z_score: 3.0          # flag if |z| > 3.0
+    applies_to: [paid, incurred]
+    reference: "CAS E-Forum 2019, Schedule P loss development triangles"
+
+  - id: R2
+    name: ata_zscore_moderate
+    description: >
+      Moderate ATA factor deviation. Warrants actuary attention but does not
+      block the pipeline.
+    severity: warning
+    threshold:
+      z_score: 2.0          # flag if 2.0 ≤ |z| < 3.0
+    applies_to: [paid, incurred]
+
+  # --- Diagonal effect rules --------------------------------------------------
+
+  - id: R3
+    name: diagonal_effect_significant
+    description: >
+      A calendar-year diagonal regression reveals a statistically significant
+      systematic effect (e.g. reserve strengthening, case reserve reset).
+      Detected via OLS of ATA factors against diagonal index.
+    severity: error
+    threshold:
+      p_value: 0.05         # flag if regression p-value < 0.05
+      r_squared_min: 0.30   # only flag if R² ≥ 0.30 (effect must be substantial)
+    applies_to: [paid, incurred]
+    reference: "Venter (2007), Testing the Assumptions of Age-to-Age Factors"
+
+  - id: R4
+    name: diagonal_effect_marginal
+    description: >
+      Marginally significant diagonal effect. May reflect industry-wide
+      development patterns rather than company-specific reserve actions.
+    severity: warning
+    threshold:
+      p_value: 0.10
+      r_squared_min: 0.15
+    applies_to: [paid, incurred]
+
+  # --- Development factor plausibility rules ----------------------------------
+
+  - id: R5
+    name: ata_factor_below_one
+    description: >
+      Cumulative paid ATA factor below 1.0 (negative development). Rare in
+      Workers Compensation; may indicate data error or salvage/subrogation.
+    severity: error
+    threshold:
+      min_factor: 1.0
+    applies_to: [paid]
+    lobs: [WC]
+
+  - id: R6
+    name: ata_factor_extreme_high
+    description: >
+      ATA factor exceeds the upper plausibility bound. May indicate data entry
+      error, LOB-specific shock (mass tort, catastrophe), or reserve release.
+    severity: error
+    threshold:
+      max_factor:
+        WC:  5.0    # Workers Compensation: conservative bound
+        OL:  8.0    # Other Liability: higher volatility
+        PL:  8.0    # Products Liability
+        CA:  4.0    # Commercial Auto
+        PA:  3.0    # Personal Auto
+        MM:  6.0    # Medical Malpractice
+    applies_to: [paid, incurred]
+
+  # --- Earned premium plausibility rules --------------------------------------
+
+  - id: R7
+    name: earned_premium_zero
+    description: >
+      Earned premium is zero or negative for an accident year. Indicates a
+      data integrity issue; the row cannot produce a meaningful loss ratio.
+    severity: error
+    threshold:
+      min_premium: 0.0   # strictly positive required
+    applies_to: [earned_premium]
+
+  - id: R8
+    name: loss_ratio_extreme
+    description: >
+      Implied ultimate loss ratio (cumulative incurred / earned premium) is
+      outside plausible range for the line of business.
+    severity: warning
+    threshold:
+      min_ratio:
+        WC: 0.30
+        OL: 0.20
+        PL: 0.20
+        CA: 0.35
+        PA: 0.40
+        MM: 0.25
+      max_ratio:
+        WC: 2.50
+        OL: 5.00
+        PL: 5.00
+        CA: 2.00
+        PA: 1.80
+        MM: 4.00
+    applies_to: [loss_ratio]
+    reference: "A.M. Best Industry Composite, WC 1988-1997"
+
+  # --- Year-over-year change rules --------------------------------------------
+
+  - id: R9
+    name: yoy_premium_change_high
+    description: >
+      Earned premium changed by more than the tolerance band year-over-year.
+      May reflect book growth/shrinkage, acquisition, or data error.
+    severity: warning
+    threshold:
+      max_pct_change: 0.50   # flag if |ΔP/P| > 50%
+    applies_to: [earned_premium]
+
+
+# --- Global settings ----------------------------------------------------------
+
+global:
+  zscore_default_threshold: 3.0       # used if rule-specific threshold absent
+  min_triangle_rows: 10               # warn if fewer rows ingested per LOB
+  max_development_lag: 10             # Schedule P: lags 1-10
+  accident_year_range: [1988, 1997]   # valid range for CAS Schedule P dataset
+  supported_lobs: [WC, OL, PL, CA, PA, MM]
