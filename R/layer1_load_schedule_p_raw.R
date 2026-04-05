@@ -22,14 +22,55 @@
 # -- LOB metadata --------------------------------------------------------------
 
 # CAS Schedule P base URLs by vintage
-# - "original"  : 1988–1997 accident years (Meyers & Shi 2008, re-hosted 2021-04)
-# - "extended"  : 1998–2007 accident years (CAS Reserve Research Working Group, 2026)
+# - "original" : 1988–1997 accident years (Meyers & Shi 2008)
+# - "extended" : 1998–2007 accident years (CAS Reserve Research Working Group)
 #
-# To update the extended base URL if CAS re-hosts the files, change the
-# CAS_BASE_EXTENDED constant below. Verify the URL on the landing page:
+# The extended vintage is tried from multiple candidate base URLs in order;
+# the first URL that successfully serves the file wins.  If CAS re-hosts
+# the files, add the new base as the first entry in CAS_BASES_EXTENDED.
+#
+# Landing page (find the current download links here):
 # https://www.casact.org/publications-research/research/research-resources/loss-reserving-data-pulled-naic-schedule-p
 CAS_BASE_ORIGINAL <- "https://www.casact.org/sites/default/files/2021-04"
-CAS_BASE_EXTENDED <- "https://www.casact.org/sites/default/files/2026-04"
+
+# Candidate base URLs for the 1998-2007 extended vintage, tried in order.
+# Add newly discovered paths at the front of this vector.
+CAS_BASES_EXTENDED <- c(
+  "https://www.casact.org/sites/default/files/2026-04",
+  "https://www.casact.org/sites/default/files/2026-03",
+  "https://www.casact.org/sites/default/files/2026-02",
+  "https://www.casact.org/sites/default/files/2026-01",
+  "https://www.casact.org/sites/default/files/2025-12",
+  "https://www.casact.org/sites/default/files/2025-06",
+  "https://www.casact.org/sites/default/files/2025-01",
+  "https://www.casact.org/research/reserve_data"
+)
+
+#' Probe candidate base URLs and return the first that serves a given filename
+#'
+#' @param filename Character scalar: e.g. "wkcomp_pos.csv"
+#' @param bases    Character vector: base URLs to try, in order.
+#' @param timeout  Numeric: per-URL HEAD timeout in seconds.
+#' @return Character scalar: working base URL, or NULL if none respond.
+.probe_base_url <- function(filename, bases, timeout = 10) {
+  for (base in bases) {
+    url  <- paste0(base, "/", filename)
+    code <- tryCatch({
+      con <- url(url, open = "rb")
+      close(con)
+      200L
+    }, warning = function(w) {
+      # download.file raises a warning for HTTP errors; treat as failure
+      if (grepl("HTTP", conditionMessage(w), ignore.case = TRUE)) 404L else 200L
+    }, error = function(e) 0L)
+
+    if (code == 200L) {
+      message(glue::glue("  CAS URL resolved: {base}"))
+      return(base)
+    }
+  }
+  NULL
+}
 
 # Posted-reserve column suffix differs between vintages:
 #   original  → PostedReserve97_{sfx}  (reserves as of year-end 1997)
@@ -48,33 +89,48 @@ CAS_BASE_EXTENDED <- "https://www.casact.org/sites/default/files/2026-04"
 #' @return Named list: url, col_suffix, filename, ay_min, ay_max.
 lob_metadata <- function(lob_code, vintage = "extended") {
   vintage <- match.arg(vintage, c("extended", "original"))
-  base    <- if (vintage == "extended") CAS_BASE_EXTENDED else CAS_BASE_ORIGINAL
   ay_min  <- if (vintage == "extended") 1998L else 1988L
   ay_max  <- if (vintage == "extended") 2007L else 1997L
 
-  meta <- list(
-    OL = list(url = paste0(base, "/othliab_pos.csv"),  col_suffix = "_h1", filename = "othliab_pos.csv"),
-    WC = list(url = paste0(base, "/wkcomp_pos.csv"),   col_suffix = "_D",  filename = "wkcomp_pos.csv"),
-    PL = list(url = paste0(base, "/prodliab_pos.csv"), col_suffix = "_r1", filename = "prodliab_pos.csv"),
-    CA = list(url = paste0(base, "/comauto_pos.csv"),  col_suffix = "_C",  filename = "comauto_pos.csv"),
-    PA = list(url = paste0(base, "/ppauto_pos.csv"),   col_suffix = "_B",  filename = "ppauto_pos.csv"),
-    MM = list(url = paste0(base, "/medmal_pos.csv"),   col_suffix = "_f1", filename = "medmal_pos.csv")
+  filenames <- list(
+    OL = list(raw_filename = "othliab_pos.csv",  col_suffix = "_h1"),
+    WC = list(raw_filename = "wkcomp_pos.csv",   col_suffix = "_D"),
+    PL = list(raw_filename = "prodliab_pos.csv", col_suffix = "_r1"),
+    CA = list(raw_filename = "comauto_pos.csv",  col_suffix = "_C"),
+    PA = list(raw_filename = "ppauto_pos.csv",   col_suffix = "_B"),
+    MM = list(raw_filename = "medmal_pos.csv",   col_suffix = "_f1")
   )
-  if (!lob_code %in% names(meta)) {
+  if (!lob_code %in% names(filenames)) {
     stop(glue::glue(
-      "Unknown LOB code '{lob_code}'. Supported: {paste(names(meta), collapse=', ')}"
+      "Unknown LOB code '{lob_code}'. Supported: {paste(names(filenames), collapse=', ')}"
     ))
   }
-  m         <- meta[[lob_code]]
-  m$ay_min  <- ay_min
-  m$ay_max  <- ay_max
-  m$vintage <- vintage
-  # For extended vintage, cache into a sub-directory to avoid collision with
-  # original files of the same name
-  if (vintage == "extended") {
-    m$filename <- sub("_pos\\.csv$", "_pos_ext.csv", m$filename)
+
+  f   <- filenames[[lob_code]]
+  sfx <- f$col_suffix
+
+  # For extended vintage: cached file gets _ext suffix to avoid collision
+  cache_filename <- if (vintage == "extended") {
+    sub("\\.csv$", "_ext.csv", f$raw_filename)
+  } else {
+    f$raw_filename
   }
-  m
+
+  # Base URL: original uses a fixed path; extended probes candidates lazily
+  # (actual probing happens in download_cas_csv to avoid network calls at
+  #  metadata lookup time)
+  base <- if (vintage == "extended") CAS_BASES_EXTENDED[[1L]] else CAS_BASE_ORIGINAL
+  url  <- paste0(base, "/", f$raw_filename)
+
+  list(
+    url          = url,
+    raw_filename = f$raw_filename,
+    col_suffix   = sfx,
+    filename     = cache_filename,
+    ay_min       = ay_min,
+    ay_max       = ay_max,
+    vintage      = vintage
+  )
 }
 
 
@@ -106,21 +162,51 @@ download_cas_csv <- function(lob_code, dest_dir, force = FALSE,
     return(invisible(dest_file))
   }
 
-  message(glue::glue("Downloading {lob_code} data from CAS website..."))
+  message(glue::glue("Downloading {lob_code} ({vintage} vintage) from CAS website..."))
   old_timeout <- getOption("timeout")
   options(timeout = 300)
   on.exit(options(timeout = old_timeout), add = TRUE)
 
-  tryCatch(
-    utils::download.file(meta$url, destfile = dest_file, mode = "wb", quiet = FALSE),
-    error = function(e) {
-      stop(glue::glue(
-        "Failed to download {meta$url}\n",
-        "Error: {conditionMessage(e)}\n",
-        "Check your internet connection or download manually and place at: {dest_file}"
-      ))
+  # For the extended vintage, probe candidate base URLs in order so we are
+  # resilient to CAS re-hosting the files at a new date path.
+  bases <- if (vintage == "extended") CAS_BASES_EXTENDED else CAS_BASE_ORIGINAL
+  if (!is.character(bases)) bases <- as.character(bases)
+
+  download_ok <- FALSE
+  last_error  <- NULL
+
+  for (base in bases) {
+    url <- paste0(base, "/", meta$raw_filename)
+    message(glue::glue("  Trying: {url}"))
+    result <- tryCatch({
+      utils::download.file(url, destfile = dest_file, mode = "wb", quiet = TRUE)
+      TRUE
+    }, warning = function(w) {
+      # download.file warns (not errors) on HTTP 4xx/5xx
+      FALSE
+    }, error = function(e) {
+      last_error <<- conditionMessage(e)
+      FALSE
+    })
+
+    if (isTRUE(result) && file.exists(dest_file) && file.size(dest_file) > 1000L) {
+      download_ok <- TRUE
+      break
     }
-  )
+    # Clean up empty/partial file before next attempt
+    if (file.exists(dest_file)) unlink(dest_file)
+  }
+
+  if (!download_ok) {
+    stop(glue::glue(
+      "Could not download {lob_code} ({vintage} vintage) from any candidate URL.\n",
+      "URLs tried:\n",
+      paste0("  ", bases, "/", meta$raw_filename, collapse = "\n"), "\n\n",
+      "To fix: visit https://www.casact.org/publications-research/research/",
+      "research-resources/loss-reserving-data-pulled-naic-schedule-p\n",
+      "and place the CSV manually at: {dest_file}"
+    ))
+  }
 
   message(glue::glue("Downloaded: {dest_file} ({round(file.size(dest_file)/1024)} KB)"))
   invisible(dest_file)
