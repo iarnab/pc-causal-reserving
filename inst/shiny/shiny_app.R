@@ -579,21 +579,6 @@ server <- function(input, output, session) {
     )
   })
 
-  # Prevent bslib tab suspension from caching stale results on the Baseline tab.
-  # outputOptions must be called AFTER the outputs are defined, so we defer with
-  # an observeEvent on session$onFlushed — but the simpler approach is to just
-  # call it here after all renderX calls below are registered.
-  # (R evaluates server() body top-to-bottom so this block is re-positioned
-  #  to after the render functions; for now we use an initialisation observer.)
-  observe({
-    outputOptions(output, "cl_total_ibnr",    suspendWhenHidden = FALSE)
-    outputOptions(output, "cl_total_ultimate", suspendWhenHidden = FALSE)
-    outputOptions(output, "cl_eval_year",      suspendWhenHidden = FALSE)
-    outputOptions(output, "cl_ibnr_chart",    suspendWhenHidden = FALSE)
-    outputOptions(output, "cl_ata_chart",     suspendWhenHidden = FALSE)
-    outputOptions(output, "cl_reserve_table", suspendWhenHidden = FALSE)
-    outputOptions(output, "cl_company_label", suspendWhenHidden = FALSE)
-  }, once = TRUE)
 
   output$cl_company_label <- renderText({
     co <- loaded_company_r()
@@ -1145,6 +1130,18 @@ server <- function(input, output, session) {
       )
     )
   })
+
+  # -- Prevent bslib tab suspension for Baseline outputs ----------------------
+  # bslib::page_navbar CSS-hides inactive tabs; Shiny may permanently suspend
+  # outputs in those panels. Setting suspendWhenHidden = FALSE ensures they
+  # always re-evaluate when chainladder_r() is invalidated.
+  outputOptions(output, "cl_company_label",  suspendWhenHidden = FALSE)
+  outputOptions(output, "cl_total_ibnr",     suspendWhenHidden = FALSE)
+  outputOptions(output, "cl_total_ultimate", suspendWhenHidden = FALSE)
+  outputOptions(output, "cl_eval_year",      suspendWhenHidden = FALSE)
+  outputOptions(output, "cl_ibnr_chart",     suspendWhenHidden = FALSE)
+  outputOptions(output, "cl_ata_chart",      suspendWhenHidden = FALSE)
+  outputOptions(output, "cl_reserve_table",  suspendWhenHidden = FALSE)
 }
 
 # Helper: null-coalescing operator
