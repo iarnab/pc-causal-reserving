@@ -84,7 +84,9 @@ compute_vw_ata <- function(tri_wide, lags) {
 #'   cumulative_paid_loss (numeric).
 #' @param eval_year Integer calendar year of evaluation (year-end). For each
 #'   accident year ay, only lags up to eval_year - ay + 1 are retained.
-#'   NULL (default) uses all available lags per accident year.
+#'   NULL (default) derives eval_year from the data as
+#'   min(accident_year) + max(development_lag) - 1, which equals the
+#'   calendar year of the last full diagonal.
 #' @param tail_factor Numeric >= 1.0. Applied beyond the last observed lag.
 #'   Default 1.0 assumes full development within the data.
 #'
@@ -101,11 +103,6 @@ compute_chainladder_reserve <- function(triangle_df,
       tail_factor < 1.0) {
     stop("tail_factor must be a numeric scalar >= 1.0")
   }
-  if (!is.null(eval_year)) {
-    eval_year <- as.integer(eval_year)
-    if (is.na(eval_year)) stop("eval_year must be a valid integer year.")
-  }
-
   required <- c("accident_year", "development_lag", "cumulative_paid_loss")
   missing  <- setdiff(required, names(triangle_df))
   if (length(missing) > 0L) {
@@ -122,15 +119,26 @@ compute_chainladder_reserve <- function(triangle_df,
     stop("No valid (finite, positive) cumulative_paid_loss values.")
   }
 
-  if (!is.null(eval_year)) {
-    df <- df[df$development_lag <=
-               (eval_year - df$accident_year + 1L), ]
-    if (nrow(df) == 0L) {
-      stop(glue::glue(
-        "No data remains after applying eval_year = {eval_year}. ",
-        "Check that accident years are <= eval_year."
-      ))
-    }
+  # Derive eval_year from the data when not supplied:
+  #   eval_year = min(accident_year) + max(development_lag) - 1
+  # This is the calendar year of the last full diagonal, e.g. for a
+  # 1998-2007 dataset: 1998 + 10 - 1 = 2007.
+  if (is.null(eval_year)) {
+    eval_year <- as.integer(
+      min(df$accident_year) + max(df$development_lag) - 1L
+    )
+    message(glue::glue("eval_year not supplied — derived from data: {eval_year}"))
+  } else {
+    eval_year <- as.integer(eval_year)
+    if (is.na(eval_year)) stop("eval_year must be a valid integer year.")
+  }
+
+  df <- df[df$development_lag <= (eval_year - df$accident_year + 1L), ]
+  if (nrow(df) == 0L) {
+    stop(glue::glue(
+      "No data remains after applying eval_year = {eval_year}. ",
+      "Check that accident years are <= eval_year."
+    ))
   }
 
   lags <- sort(unique(as.integer(df$development_lag)))
