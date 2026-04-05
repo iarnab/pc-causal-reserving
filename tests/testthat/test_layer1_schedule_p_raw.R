@@ -49,8 +49,8 @@ test_that("lob_metadata returns correct fields for all 6 LOB codes", {
   for (code in c("OL", "WC", "PL", "CA", "PA", "MM")) {
     meta <- lob_metadata(code)
     expect_true(is.list(meta))
-    expect_true(all(c("url", "col_suffix", "filename") %in% names(meta)))
-    expect_true(nzchar(meta$url))
+    expect_true(all(c("urls", "col_suffix", "filename") %in% names(meta)))
+    expect_true(length(meta$urls) > 0L)
     expect_true(nzchar(meta$col_suffix))
     expect_true(nzchar(meta$filename))
   }
@@ -66,22 +66,10 @@ test_that("lob_metadata filenames end with .csv", {
   }
 })
 
-test_that("lob_metadata returns correct vintage fields", {
-  meta_ext <- lob_metadata("WC", vintage = "extended")
-  expect_equal(meta_ext$vintage, "extended")
-  expect_equal(meta_ext$ay_min, 1998L)
-  expect_equal(meta_ext$ay_max, 2007L)
-  expect_true(grepl("_ext\\.csv$", meta_ext$filename))
-
-  meta_orig <- lob_metadata("WC", vintage = "original")
-  expect_equal(meta_orig$vintage, "original")
-  expect_equal(meta_orig$ay_min, 1988L)
-  expect_equal(meta_orig$ay_max, 1997L)
-  expect_false(grepl("_ext\\.csv$", meta_orig$filename))
-})
-
-test_that("lob_metadata extended URL differs from original URL", {
-  expect_false(lob_metadata("WC", "extended")$url == lob_metadata("WC", "original")$url)
+test_that("lob_metadata urls vector contains multiple fallback candidates", {
+  meta <- lob_metadata("WC")
+  expect_true(length(meta$urls) >= 3L)
+  expect_true(all(grepl("wkcomp_pos\\.csv$", meta$urls)))
 })
 
 
