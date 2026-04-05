@@ -172,6 +172,9 @@ ui <- bslib::page_navbar(
   bslib::nav_panel(
     title = "Baseline",
     icon  = shiny::icon("table-columns"),
+    tags$h6(class = "text-muted mb-3",
+            shiny::icon("building"), " ",
+            textOutput("cl_company_label", inline = TRUE)),
     bslib::layout_columns(
       col_widths = c(4, 4, 4),
       bslib::value_box(
@@ -555,9 +558,12 @@ server <- function(input, output, session) {
 
   # -- Tab 2: Chain-ladder reactive --------------------------------------------
   chainladder_r <- reactive({
-    req(!is.null(loaded_company_r()))
+    co <- loaded_company_r()
+    req(!is.null(co))
     req(file.exists(DB_PATH))
-    co  <- loaded_company_r()
+    message(glue::glue(
+      "chainladder_r: evaluating for lob={co$lob} grcode={co$grcode} ({co$grname})"
+    ))
     con <- DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
     on.exit(DBI::dbDisconnect(con), add = TRUE)
     tri <- DBI::dbGetQuery(con, glue::glue_sql(
@@ -565,11 +571,34 @@ server <- function(input, output, session) {
        FROM triangles WHERE lob = {co$lob} AND grcode = {co$grcode}",
       .con = con
     ))
+    message(glue::glue("chainladder_r: query returned {nrow(tri)} rows"))
     req(nrow(tri) > 0L)
     tryCatch(
       compute_chainladder_reserve(tri),
       error = function(e) { warning(e$message); NULL }
     )
+  })
+
+  # Prevent bslib tab suspension from caching stale results on the Baseline tab.
+  # outputOptions must be called AFTER the outputs are defined, so we defer with
+  # an observeEvent on session$onFlushed — but the simpler approach is to just
+  # call it here after all renderX calls below are registered.
+  # (R evaluates server() body top-to-bottom so this block is re-positioned
+  #  to after the render functions; for now we use an initialisation observer.)
+  observe({
+    outputOptions(output, "cl_total_ibnr",    suspendWhenHidden = FALSE)
+    outputOptions(output, "cl_total_ultimate", suspendWhenHidden = FALSE)
+    outputOptions(output, "cl_eval_year",      suspendWhenHidden = FALSE)
+    outputOptions(output, "cl_ibnr_chart",    suspendWhenHidden = FALSE)
+    outputOptions(output, "cl_ata_chart",     suspendWhenHidden = FALSE)
+    outputOptions(output, "cl_reserve_table", suspendWhenHidden = FALSE)
+    outputOptions(output, "cl_company_label", suspendWhenHidden = FALSE)
+  }, once = TRUE)
+
+  output$cl_company_label <- renderText({
+    co <- loaded_company_r()
+    req(!is.null(co))
+    glue::glue("{co$grname} \u2014 {co$lob} (GRCODE {co$grcode})")
   })
 
   output$cl_total_ibnr <- renderText({
