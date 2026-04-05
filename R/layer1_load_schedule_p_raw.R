@@ -24,47 +24,78 @@
 
 # -- LOB metadata --------------------------------------------------------------
 
-# Fallback download URLs tried in order when a CSV is not pre-placed locally.
-# The first URL that delivers a non-empty file wins.
-# Add newly discovered CAS paths at the front of this vector.
-# Landing page: https://www.casact.org/publications-research/research/
-#               research-resources/loss-reserving-data-pulled-naic-schedule-p
-CAS_BASE_URLS <- c(
-  "https://www.casact.org/sites/default/files/2026-04",
-  "https://www.casact.org/sites/default/files/2026-03",
-  "https://www.casact.org/sites/default/files/2026-02",
-  "https://www.casact.org/sites/default/files/2026-01",
-  "https://www.casact.org/sites/default/files/2025-12",
-  "https://www.casact.org/sites/default/files/2025-06",
-  "https://www.casact.org/sites/default/files/2025-01",
-  "https://www.casact.org/sites/default/files/2021-04",
-  "https://www.casact.org/research/reserve_data"
+# CAS Schedule P — explicit download candidates per LOB.
+#
+# Two vintages are available on the CAS landing page:
+#   Extended (1998-2007): uniform column names, no LOB suffix.
+#     https://www.casact.org/publications-research/research/research-resources/
+#     loss-reserving-data-pulled-naic-schedule-p  (section "Current Data Sets")
+#   Original (1988-1997): LOB-specific column suffix (Meyers & Shi 2008).
+#
+# Each LOB entry lists candidate URLs in preference order (extended first).
+# download_cas_csv() tries them in sequence and saves under filename_local.
+CAS_CANDIDATES <- list(
+  OL = list(
+    filename_local = "othliab_pos.csv",
+    col_suffix     = "_h1",
+    urls = c(
+      "https://www.casact.org/sites/default/files/2026-03/othliab_pos_98-07.csv",
+      "https://www.casact.org/sites/default/files/2021-04/othliab_pos.csv"
+    )
+  ),
+  WC = list(
+    filename_local = "wkcomp_pos.csv",
+    col_suffix     = "_D",
+    urls = c(
+      "https://www.casact.org/sites/default/files/2026-03/wkcomp_pos_98-07.csv",
+      "https://www.casact.org/sites/default/files/2021-04/wkcomp_pos.csv"
+    )
+  ),
+  PL = list(
+    filename_local = "prodliab_pos.csv",
+    col_suffix     = "_r1",
+    urls = c(
+      "https://www.casact.org/sites/default/files/2026-03/prodliab_pos_98-07.csv",
+      "https://www.casact.org/sites/default/files/2021-04/prodliab_pos.csv"
+    )
+  ),
+  CA = list(
+    filename_local = "comauto_pos.csv",
+    col_suffix     = "_C",
+    urls = c(
+      "https://www.casact.org/sites/default/files/2026-03/comauto_pos_98-07.csv",
+      "https://www.casact.org/sites/default/files/2021-04/comauto_pos.csv"
+    )
+  ),
+  PA = list(
+    filename_local = "ppauto_pos.csv",
+    col_suffix     = "_B",
+    urls = c(
+      "https://www.casact.org/sites/default/files/2026-03/ppauto_pos98-07%20%281%29.csv",
+      "https://www.casact.org/sites/default/files/2021-04/ppauto_pos.csv"
+    )
+  ),
+  MM = list(
+    filename_local = "medmal_pos.csv",
+    col_suffix     = "_f1",
+    urls = c(
+      "https://www.casact.org/sites/default/files/2026-03/medmal_pos_98-07.csv",
+      "https://www.casact.org/sites/default/files/2021-04/medmal_pos.csv"
+    )
+  )
 )
 
 #' Return metadata for a CAS Schedule P line of business
 #'
-#' Provides the local filename and LOB-specific column suffix.
-#' Accident-year range is NOT hardcoded here — it is read from the data.
-#'
 #' @param lob_code Character scalar: one of "OL", "WC", "PL", "CA", "PA", "MM".
-#' @return Named list: filename, col_suffix, urls.
+#' @return Named list: filename_local, col_suffix, urls.
 lob_metadata <- function(lob_code) {
-  lobs <- list(
-    OL = list(filename = "othliab_pos.csv",  col_suffix = "_h1"),
-    WC = list(filename = "wkcomp_pos.csv",   col_suffix = "_D"),
-    PL = list(filename = "prodliab_pos.csv", col_suffix = "_r1"),
-    CA = list(filename = "comauto_pos.csv",  col_suffix = "_C"),
-    PA = list(filename = "ppauto_pos.csv",   col_suffix = "_B"),
-    MM = list(filename = "medmal_pos.csv",   col_suffix = "_f1")
-  )
-  if (!lob_code %in% names(lobs)) {
+  if (!lob_code %in% names(CAS_CANDIDATES)) {
     stop(glue::glue(
-      "Unknown LOB code '{lob_code}'. Supported: {paste(names(lobs), collapse=', ')}"
+      "Unknown LOB code '{lob_code}'. Supported: {paste(names(CAS_CANDIDATES), collapse=', ')}"
     ))
   }
-  m       <- lobs[[lob_code]]
-  m$urls  <- paste0(CAS_BASE_URLS, "/", m$filename)
-  m
+  CAS_CANDIDATES[[lob_code]]
 }
 
 
@@ -87,7 +118,7 @@ download_cas_csv <- function(lob_code, dest_dir, force = FALSE) {
   }
 
   meta      <- lob_metadata(lob_code)
-  dest_file <- file.path(dest_dir, meta$filename)
+  dest_file <- file.path(dest_dir, meta$filename_local)
 
   if (file.exists(dest_file) && !force) {
     message(glue::glue("Using local file: {dest_file}"))
@@ -110,6 +141,7 @@ download_cas_csv <- function(lob_code, dest_dir, force = FALSE) {
 
     if (isTRUE(ok) && file.exists(dest_file) && file.size(dest_file) > 1000L) {
       download_ok <- TRUE
+      message(glue::glue("  Downloaded: {dest_file} ({round(file.size(dest_file)/1024)} KB)"))
       break
     }
     if (file.exists(dest_file)) unlink(dest_file)
@@ -117,7 +149,7 @@ download_cas_csv <- function(lob_code, dest_dir, force = FALSE) {
 
   if (!download_ok) {
     stop(glue::glue(
-      "'{meta$filename}' not found locally and all download attempts failed.\n\n",
+      "'{meta$filename_local}' not found locally and all download attempts failed.\n\n",
       "Place the file manually at:\n  {dest_file}\n\n",
       "Download from:\n",
       "  https://www.casact.org/publications-research/research/research-resources/",
@@ -125,7 +157,6 @@ download_cas_csv <- function(lob_code, dest_dir, force = FALSE) {
     ))
   }
 
-  message(glue::glue("Downloaded: {dest_file} ({round(file.size(dest_file)/1024)} KB)"))
   invisible(dest_file)
 }
 
@@ -153,9 +184,18 @@ parse_cas_csv <- function(file_path, lob_code) {
                          col_types = readr::cols(.default = readr::col_guess()),
                          show_col_types = FALSE)
 
-  col_paid     <- paste0("CumPaidLoss",   sfx)
-  col_incurred <- paste0("IncurLoss",     sfx)
-  col_premium  <- paste0("EarnedPremNet", sfx)
+  # Auto-detect schema:
+  #   Extended (1998-2007): uniform names — CumPaidLoss, IncurredLosses, EarnedPremNet
+  #   Original (1988-1997): LOB-specific suffix — CumPaidLoss_{sfx}, IncurLoss_{sfx}, EarnedPremNet_{sfx}
+  if ("CumPaidLoss" %in% names(raw)) {
+    col_paid     <- "CumPaidLoss"
+    col_incurred <- "IncurredLosses"
+    col_premium  <- "EarnedPremNet"
+  } else {
+    col_paid     <- paste0("CumPaidLoss",   sfx)
+    col_incurred <- paste0("IncurLoss",     sfx)
+    col_premium  <- paste0("EarnedPremNet", sfx)
+  }
 
   required <- c("GRCODE", "GRNAME", "AccidentYear", "DevelopmentLag",
                 col_paid, col_incurred, col_premium)
