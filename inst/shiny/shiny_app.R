@@ -168,7 +168,49 @@ ui <- bslib::page_navbar(
     )
   ),
 
-  # ── Tab 2: Causal Explorer ─────────────────────────────────────────────────
+  # ── Tab 2: Baseline Chain-Ladder ──────────────────────────────────────────
+  bslib::nav_panel(
+    title = "Baseline",
+    icon  = shiny::icon("table-columns"),
+    bslib::layout_columns(
+      col_widths = c(4, 4, 4),
+      bslib::value_box(
+        title    = "Total IBNR",
+        value    = textOutput("cl_total_ibnr"),
+        showcase = shiny::icon("coins"),
+        theme    = "primary"
+      ),
+      bslib::value_box(
+        title    = "Total Ultimate",
+        value    = textOutput("cl_total_ultimate"),
+        showcase = shiny::icon("bullseye"),
+        theme    = "success"
+      ),
+      bslib::value_box(
+        title    = "Evaluation Year",
+        value    = textOutput("cl_eval_year"),
+        showcase = shiny::icon("calendar"),
+        theme    = "info"
+      )
+    ),
+    bslib::layout_columns(
+      col_widths = c(7, 5),
+      bslib::card(
+        bslib::card_header("IBNR by Accident Year"),
+        plotly::plotlyOutput("cl_ibnr_chart", height = "300px")
+      ),
+      bslib::card(
+        bslib::card_header("ATA Factors & CDFs"),
+        plotly::plotlyOutput("cl_ata_chart", height = "300px")
+      )
+    ),
+    bslib::card(
+      bslib::card_header("Reserve Summary"),
+      reactable::reactableOutput("cl_reserve_table")
+    )
+  ),
+
+  # ── Tab 3: Causal Explorer ─────────────────────────────────────────────────
   bslib::nav_panel(
     title = "Causal Explorer",
     icon  = shiny::icon("diagram-project"),
@@ -509,6 +551,136 @@ server <- function(input, output, session) {
 
     list(ata_df = ata_df, anomalies = anomalies,
          zscore_flags = zscore_flags, diag_flags = diag_flags)
+  })
+
+  # -- Tab 2: Chain-ladder reactive --------------------------------------------
+  chainladder_r <- reactive({
+    req(!is.null(loaded_company_r()))
+    req(file.exists(DB_PATH))
+    co  <- loaded_company_r()
+    con <- DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
+    on.exit(DBI::dbDisconnect(con), add = TRUE)
+    tri <- DBI::dbGetQuery(con, glue::glue_sql(
+      "SELECT accident_year, development_lag, cumulative_paid_loss
+       FROM triangles WHERE lob = {co$lob} AND grcode = {co$grcode}",
+      .con = con
+    ))
+    req(nrow(tri) > 0L)
+    tryCatch(
+      compute_chainladder_reserve(tri),
+      error = function(e) { warning(e$message); NULL }
+    )
+  })
+
+  output$cl_total_ibnr <- renderText({
+    cl <- chainladder_r()
+    req(!is.null(cl))
+    paste0("$", formatC(sum(cl$ibnr), format = "f", digits = 0,
+                        big.mark = ","))
+  })
+
+  output$cl_total_ultimate <- renderText({
+    cl <- chainladder_r()
+    req(!is.null(cl))
+    paste0("$", formatC(sum(cl$ultimate_loss), format = "f", digits = 0,
+                        big.mark = ","))
+  })
+
+  output$cl_eval_year <- renderText({
+    cl <- chainladder_r()
+    req(!is.null(cl))
+    as.character(attr(cl, "eval_year"))
+  })
+
+  output$cl_ibnr_chart <- plotly::renderPlotly({
+    cl <- chainladder_r()
+    req(!is.null(cl))
+    plotly::plot_ly(
+      data   = cl,
+      x      = ~factor(accident_year),
+      y      = ~ibnr,
+      type   = "bar",
+      marker = list(color = "#00338D"),
+      text   = ~paste0("AY ", accident_year,
+                       "<br>IBNR: $", formatC(ibnr, format = "f",
+                                              digits = 0, big.mark = ",")),
+      hoverinfo = "text"
+    ) |>
+      plotly::layout(
+        xaxis = list(title = "Accident Year"),
+        yaxis = list(title = "IBNR ($000s)"),
+        margin = list(b = 50)
+      )
+  })
+
+  output$cl_ata_chart <- plotly::renderPlotly({
+    cl <- chainladder_r()
+    req(!is.null(cl))
+    atas <- attr(cl, "ata_factors")
+    cdfs <- attr(cl, "cdf")
+    # x-axis: from_lag values
+    from_lags <- as.integer(sub("_to_.*", "", names(atas)))
+    df_plot <- data.frame(
+      lag        = from_lags,
+      ata        = unname(atas),
+      cdf        = unname(cdfs[-length(cdfs)]),
+      stringsAsFactors = FALSE
+    )
+    plotly::plot_ly(df_plot) |>
+      plotly::add_bars(
+        x    = ~lag, y = ~ata, name = "ATA",
+        marker = list(color = "#43B02A"),
+        yaxis = "y"
+      ) |>
+      plotly::add_lines(
+        x    = ~lag, y = ~cdf, name = "CDF",
+        line = list(color = "#DC2626", width = 2),
+        yaxis = "y2"
+      ) |>
+      plotly::layout(
+        xaxis  = list(title = "From Lag"),
+        yaxis  = list(title = "ATA Factor"),
+        yaxis2 = list(title = "CDF to Ultimate", overlaying = "y",
+                      side = "right"),
+        legend = list(orientation = "h", y = -0.2),
+        margin = list(b = 60, r = 60)
+      )
+  })
+
+  output$cl_reserve_table <- reactable::renderReactable({
+    cl <- chainladder_r()
+    req(!is.null(cl))
+    disp <- cl
+    disp$current_loss  <- round(disp$current_loss)
+    disp$ultimate_loss <- round(disp$ultimate_loss)
+    disp$ibnr          <- round(disp$ibnr)
+    disp$ldf           <- round(disp$ldf, 4)
+    reactable::reactable(
+      disp,
+      sortable = TRUE,
+      striped  = TRUE,
+      columns  = list(
+        accident_year = reactable::colDef(name = "Accident Year"),
+        latest_lag    = reactable::colDef(name = "Latest Lag"),
+        current_loss  = reactable::colDef(
+          name   = "Current Loss ($)",
+          format = reactable::colFormat(separators = TRUE)
+        ),
+        ldf           = reactable::colDef(name = "LDF"),
+        ultimate_loss = reactable::colDef(
+          name   = "Ultimate ($)",
+          format = reactable::colFormat(separators = TRUE)
+        ),
+        ibnr          = reactable::colDef(
+          name   = "IBNR ($)",
+          format = reactable::colFormat(separators = TRUE),
+          style  = function(value) {
+            list(color = if (value > 0) "#00338D" else "#43B02A",
+                 fontWeight = "bold")
+          }
+        )
+      )
+    )
   })
 
   # -- Tab 1: Heatmap ----------------------------------------------------------
