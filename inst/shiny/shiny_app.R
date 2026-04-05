@@ -469,21 +469,30 @@ server <- function(input, output, session) {
   # -- Reactive: build DAG once ------------------------------------------------
   dag_r <- reactive({ build_reserving_dag() })
 
-  # -- Reactive: load data and run analysis on button click --------------------
-  analysis_r <- eventReactive(input$run_analysis, {
+  # -- Reactive: run analysis automatically when company loads or AY range changes
+  # Triggered by: loaded_company_r() changing (after Load Data) OR
+  #               input$run_analysis (manual re-run) OR input$ay_range (slider).
+  analysis_trigger <- reactive({
+    list(loaded_company_r(), input$run_analysis, input$ay_range)
+  })
+
+  analysis_r <- eventReactive(analysis_trigger(), {
     req(file.exists(DB_PATH))
     req(!is.null(loaded_company_r()))
     co  <- loaded_company_r()
     con <- DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
     on.exit(DBI::dbDisconnect(con), add = TRUE)
 
+    # Use co$lob (the LOB that was actually loaded) for consistency
+    lob <- co$lob
+
     ata_df <- DBI::dbGetQuery(con, glue::glue(
-      "SELECT * FROM ata_factors WHERE lob = '{input$lob}' AND grcode = {co$grcode}
+      "SELECT * FROM ata_factors WHERE lob = '{lob}' AND grcode = {co$grcode}
        AND accident_year BETWEEN {input$ay_range[1]} AND {input$ay_range[2]}"
     ))
 
     tri_df <- DBI::dbGetQuery(con, glue::glue(
-      "SELECT * FROM triangles WHERE lob = '{input$lob}' AND grcode = {co$grcode}
+      "SELECT * FROM triangles WHERE lob = '{lob}' AND grcode = {co$grcode}
        AND accident_year BETWEEN {input$ay_range[1]} AND {input$ay_range[2]}"
     ))
 
@@ -619,9 +628,9 @@ server <- function(input, output, session) {
   narrative_r  <- reactiveVal(NULL)
 
   observe({
-    req(input$run_analysis)
+    req(!is.null(loaded_company_r()))
     res  <- analysis_r()
-    lob  <- input$lob
+    lob  <- loaded_company_r()$lob
     ay   <- as.integer(input$review_ay)
 
     if (!file.exists(DB_PATH)) return()
