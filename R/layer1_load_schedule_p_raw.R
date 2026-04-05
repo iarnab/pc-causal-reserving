@@ -21,15 +21,37 @@
 
 # -- LOB metadata --------------------------------------------------------------
 
+# CAS Schedule P base URLs by vintage
+# - "original"  : 1988–1997 accident years (Meyers & Shi 2008, re-hosted 2021-04)
+# - "extended"  : 1998–2007 accident years (CAS Reserve Research Working Group, 2026)
+#
+# To update the extended base URL if CAS re-hosts the files, change the
+# CAS_BASE_EXTENDED constant below. Verify the URL on the landing page:
+# https://www.casact.org/publications-research/research/research-resources/loss-reserving-data-pulled-naic-schedule-p
+CAS_BASE_ORIGINAL <- "https://www.casact.org/sites/default/files/2021-04"
+CAS_BASE_EXTENDED <- "https://www.casact.org/sites/default/files/2026-04"
+
+# Posted-reserve column suffix differs between vintages:
+#   original  → PostedReserve97_{sfx}  (reserves as of year-end 1997)
+#   extended  → PostedReserve07_{sfx}  (reserves as of year-end 2007)
+# The core columns we ingest (CumPaidLoss, IncurLoss, EarnedPremNet) are
+# identical between vintages.
+
 #' Return metadata for a CAS Schedule P line of business
 #'
-#' Provides the download URL, column suffix, and local filename for each
-#' supported LOB code. Refer to inst/skills/schedule_p_data.md for details.
+#' Provides the download URL, column suffix, local filename, and accident-year
+#' range for each supported LOB code and data vintage.
 #'
 #' @param lob_code Character scalar: one of "OL", "WC", "PL", "CA", "PA", "MM".
-#' @return Named list: url, col_suffix, filename.
-lob_metadata <- function(lob_code) {
-  base <- "https://www.casact.org/sites/default/files/2021-04"
+#' @param vintage  Character scalar: "extended" (1998–2007, default) or
+#'   "original" (1988–1997, Meyers & Shi legacy data).
+#' @return Named list: url, col_suffix, filename, ay_min, ay_max.
+lob_metadata <- function(lob_code, vintage = "extended") {
+  vintage <- match.arg(vintage, c("extended", "original"))
+  base    <- if (vintage == "extended") CAS_BASE_EXTENDED else CAS_BASE_ORIGINAL
+  ay_min  <- if (vintage == "extended") 1998L else 1988L
+  ay_max  <- if (vintage == "extended") 2007L else 1997L
+
   meta <- list(
     OL = list(url = paste0(base, "/othliab_pos.csv"),  col_suffix = "_h1", filename = "othliab_pos.csv"),
     WC = list(url = paste0(base, "/wkcomp_pos.csv"),   col_suffix = "_D",  filename = "wkcomp_pos.csv"),
@@ -43,7 +65,16 @@ lob_metadata <- function(lob_code) {
       "Unknown LOB code '{lob_code}'. Supported: {paste(names(meta), collapse=', ')}"
     ))
   }
-  meta[[lob_code]]
+  m         <- meta[[lob_code]]
+  m$ay_min  <- ay_min
+  m$ay_max  <- ay_max
+  m$vintage <- vintage
+  # For extended vintage, cache into a sub-directory to avoid collision with
+  # original files of the same name
+  if (vintage == "extended") {
+    m$filename <- sub("_pos\\.csv$", "_pos_ext.csv", m$filename)
+  }
+  m
 }
 
 
@@ -57,14 +88,17 @@ lob_metadata <- function(lob_code) {
 #' @param lob_code  Character scalar: LOB code (e.g. "OL", "WC").
 #' @param dest_dir  Character scalar: local directory for the downloaded file.
 #' @param force     Logical: re-download even if the file already exists.
+#' @param vintage   Character scalar: "extended" (1998–2007, default) or
+#'   "original" (1988–1997).
 #' @return Character scalar: path to the downloaded file.
-download_cas_csv <- function(lob_code, dest_dir, force = FALSE) {
+download_cas_csv <- function(lob_code, dest_dir, force = FALSE,
+                             vintage = "extended") {
   if (!dir.exists(dest_dir)) {
     dir.create(dest_dir, recursive = TRUE)
     message("Created directory: ", dest_dir)
   }
 
-  meta      <- lob_metadata(lob_code)
+  meta      <- lob_metadata(lob_code, vintage = vintage)
   dest_file <- file.path(dest_dir, meta$filename)
 
   if (file.exists(dest_file) && !force) {
@@ -106,12 +140,13 @@ download_cas_csv <- function(lob_code, dest_dir, force = FALSE) {
 #'
 #' @param file_path Character scalar: path to the raw CAS CSV file.
 #' @param lob_code  Character scalar: LOB code used to resolve column suffixes.
+#' @param vintage   Character scalar: "extended" (default) or "original".
 #' @return data.frame with columns: lob, grcode, grname, accident_year,
 #'   development_lag, cumulative_paid_loss, cumulative_incurred_loss, earned_premium.
-parse_cas_csv <- function(file_path, lob_code) {
+parse_cas_csv <- function(file_path, lob_code, vintage = "extended") {
   stopifnot(file.exists(file_path))
 
-  meta <- lob_metadata(lob_code)
+  meta <- lob_metadata(lob_code, vintage = vintage)
   sfx  <- meta$col_suffix
 
   # Read with flexible column types; column names depend on the LOB suffix
@@ -264,13 +299,16 @@ upsert_company_triangles <- function(con, df) {
 #' @param strategy       Character scalar: company selection strategy.
 #'                       "largest_premium" (default) or "most_complete".
 #' @param force_download Logical: re-download even if CSV already cached.
+#' @param vintage        Character scalar: "extended" (1998–2007, default) or
+#'   "original" (1988–1997). Use "extended" for the latest CAS data release.
 #' @return Invisible named list: grcode, grname, lob, n_triangle_rows, n_ata_rows.
 load_schedule_p_lob <- function(lob_code,
                                  dest_dir,
                                  db_path,
                                  grcode         = NULL,
                                  strategy       = "largest_premium",
-                                 force_download = FALSE) {
+                                 force_download = FALSE,
+                                 vintage        = "extended") {
   # Ensure database exists, schema is initialised, and any old schema is migrated
   if (!file.exists(db_path)) {
     if (!exists("initialise_database", mode = "function")) {
@@ -284,11 +322,12 @@ load_schedule_p_lob <- function(lob_code,
   }
 
   # 1. Download raw CSV
-  file_path <- download_cas_csv(lob_code, dest_dir, force = force_download)
+  file_path <- download_cas_csv(lob_code, dest_dir, force = force_download,
+                                vintage = vintage)
 
   # 2. Parse raw CAS columns → internal schema
-  message(glue::glue("Parsing {lob_code} data..."))
-  df_all <- parse_cas_csv(file_path, lob_code)
+  message(glue::glue("Parsing {lob_code} data (vintage={vintage})..."))
+  df_all <- parse_cas_csv(file_path, lob_code, vintage = vintage)
   message(glue::glue("  Raw rows: {nrow(df_all)}, companies: {length(unique(df_all$grcode))}"))
 
   # 3. Select one company
@@ -349,10 +388,11 @@ load_schedule_p_lob <- function(lob_code,
 #'
 #' @param lob_code  Character scalar: LOB code.
 #' @param dest_dir  Character scalar: directory for raw CSV cache.
+#' @param vintage   Character scalar: "extended" (default) or "original".
 #' @return data.frame with columns: grcode, grname, n_rows, total_premium.
-list_schedule_p_companies <- function(lob_code, dest_dir) {
-  file_path <- download_cas_csv(lob_code, dest_dir)
-  df        <- parse_cas_csv(file_path, lob_code)
+list_schedule_p_companies <- function(lob_code, dest_dir, vintage = "extended") {
+  file_path <- download_cas_csv(lob_code, dest_dir, vintage = vintage)
+  df        <- parse_cas_csv(file_path, lob_code, vintage = vintage)
 
   complete  <- df[df$earned_premium > 0 &
                     !is.na(df$cumulative_paid_loss) &

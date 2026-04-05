@@ -29,8 +29,10 @@
 
 DB_PATH   <- "data/database/causal_reserving.db"
 DATA_DIR  <- "data/schedule_p"
-AY_MIN    <- 1988L
-AY_MAX    <- 1997L
+# Accident-year range for the extended CAS dataset (1998–2007).
+# Switch to AY_MIN=1988L / AY_MAX=1997L to use the original Meyers & Shi data.
+AY_MIN    <- 1998L
+AY_MAX    <- 2007L
 LOB_CODES <- c("Workers Compensation"  = "WC",
                "Other Liability"       = "OL",
                "Product Liability"     = "PL",
@@ -124,7 +126,7 @@ ui <- bslib::page_navbar(
                  class = "btn-primary w-100 mt-2"),
     hr(),
     uiOutput("pipeline_status_ui"),
-    helpText("Source: CAS Schedule P (1988\u20131997)")
+    helpText("Source: CAS Schedule P (1998\u20132007, extended vintage)")
   ),
 
   # ── Tab 1: Anomaly Overview ────────────────────────────────────────────────
@@ -380,7 +382,7 @@ server <- function(input, output, session) {
       setProgress(0.3)
 
       comps <- tryCatch(
-        list_schedule_p_companies(lob, DATA_DIR),
+        list_schedule_p_companies(lob, DATA_DIR, vintage = "extended"),
         error = function(e) {
           shiny::showNotification(
             glue::glue("Could not list companies: {conditionMessage(e)}"),
@@ -399,7 +401,8 @@ server <- function(input, output, session) {
                         else NULL
 
       result <- tryCatch(
-        load_schedule_p_lob(lob, DATA_DIR, DB_PATH, grcode = grcode_to_load),
+        load_schedule_p_lob(lob, DATA_DIR, DB_PATH, grcode = grcode_to_load,
+                            vintage = "extended"),
         error = function(e) {
           shiny::showNotification(
             glue::glue("Load failed: {conditionMessage(e)}"),
@@ -426,7 +429,8 @@ server <- function(input, output, session) {
     withProgress(message = "Switching company\u2026", {
       result <- tryCatch(
         load_schedule_p_lob(input$lob, DATA_DIR, DB_PATH,
-                            grcode = as.integer(input$grcode_select)),
+                            grcode = as.integer(input$grcode_select),
+                            vintage = "extended"),
         error = function(e) {
           shiny::showNotification(conditionMessage(e), type = "error"); NULL
         }

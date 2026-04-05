@@ -21,7 +21,7 @@ make_cas_csv <- function(path, lob_code = "WC", n_companies = 3L,
     d <- data.frame(
       GRCODE        = i * 100L,
       GRNAME        = paste0("TestCo", i),
-      AccidentYear  = rep(1988L:1997L, length.out = rows_per_company),
+      AccidentYear  = rep(1998L:2007L, length.out = rows_per_company),
       DevelopmentLag = rep(1L:10L,     length.out = rows_per_company),
       stringsAsFactors = FALSE
     )
@@ -64,6 +64,24 @@ test_that("lob_metadata filenames end with .csv", {
   for (code in c("OL", "WC", "PL", "CA", "PA", "MM")) {
     expect_true(grepl("\\.csv$", lob_metadata(code)$filename))
   }
+})
+
+test_that("lob_metadata returns correct vintage fields", {
+  meta_ext <- lob_metadata("WC", vintage = "extended")
+  expect_equal(meta_ext$vintage, "extended")
+  expect_equal(meta_ext$ay_min, 1998L)
+  expect_equal(meta_ext$ay_max, 2007L)
+  expect_true(grepl("_ext\\.csv$", meta_ext$filename))
+
+  meta_orig <- lob_metadata("WC", vintage = "original")
+  expect_equal(meta_orig$vintage, "original")
+  expect_equal(meta_orig$ay_min, 1988L)
+  expect_equal(meta_orig$ay_max, 1997L)
+  expect_false(grepl("_ext\\.csv$", meta_orig$filename))
+})
+
+test_that("lob_metadata extended URL differs from original URL", {
+  expect_false(lob_metadata("WC", "extended")$url == lob_metadata("WC", "original")$url)
 })
 
 
@@ -152,7 +170,7 @@ make_df <- function(codes = c(100L, 200L, 300L), rows_each = 12L) {
       lob                      = "WC",
       grcode                   = gc,
       grname                   = paste0("Co", gc),
-      accident_year            = rep(1988L:1997L, length.out = rows_each),
+      accident_year            = rep(1998L:2007L, length.out = rows_each),
       development_lag          = rep(1L:10L,      length.out = rows_each),
       cumulative_paid_loss     = runif(rows_each, 100, 1000) * (gc / 100),
       cumulative_incurred_loss = runif(rows_each, 110, 1100) * (gc / 100),

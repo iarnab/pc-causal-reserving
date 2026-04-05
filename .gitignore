@@ -29,3 +29,8 @@ Thumbs.db
 .Renviron
 *.tar.gz
 *.Rcheck/
+
+# renv (commit renv.lock but not the package cache)
+renv/library/
+renv/staging/
+renv/sandbox/
