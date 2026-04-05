@@ -293,7 +293,15 @@ load_schedule_p_lob <- function(lob_code,
                                  grcode         = NULL,
                                  strategy       = "largest_premium",
                                  force_download = FALSE) {
-  if (!file.exists(db_path)) {
+  # Initialise DB if it doesn't exist OR if it exists but has no tables
+  # (a 0-byte file passes file.exists() but has no schema).
+  needs_init <- !file.exists(db_path) || {
+    con_tmp    <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+    no_tables  <- length(DBI::dbListTables(con_tmp)) == 0L
+    DBI::dbDisconnect(con_tmp)
+    no_tables
+  }
+  if (needs_init) {
     if (!exists("initialise_database", mode = "function")) {
       source(file.path(dirname(sys.frame(1)$ofile %||% "R"), "ingest_schedule_p.R"))
     }
