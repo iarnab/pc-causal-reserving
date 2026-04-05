@@ -29,9 +29,9 @@
 
 DB_PATH   <- "data/database/causal_reserving.db"
 DATA_DIR  <- "data/schedule_p"
-# Accident-year range for the extended CAS dataset (1998–2007).
-# Switch to AY_MIN=1988L / AY_MAX=1997L to use the original Meyers & Shi data.
-AY_MIN    <- 1998L
+# Accident-year slider bounds — derived dynamically from the loaded data.
+# These defaults are overridden in update_ay_slider() once data is loaded.
+AY_MIN    <- 1988L
 AY_MAX    <- 2007L
 LOB_CODES <- c("Workers Compensation"  = "WC",
                "Other Liability"       = "OL",
@@ -126,7 +126,7 @@ ui <- bslib::page_navbar(
                  class = "btn-primary w-100 mt-2"),
     hr(),
     uiOutput("pipeline_status_ui"),
-    helpText("Source: CAS Schedule P (1998\u20132007, extended vintage)")
+    helpText("Source: CAS Schedule P (NAIC Schedule P data)")
   ),
 
   # ── Tab 1: Anomaly Overview ────────────────────────────────────────────────
@@ -382,7 +382,7 @@ server <- function(input, output, session) {
       setProgress(0.3)
 
       comps <- tryCatch(
-        list_schedule_p_companies(lob, DATA_DIR, vintage = "extended"),
+        list_schedule_p_companies(lob, DATA_DIR),
         error = function(e) {
           shiny::showNotification(
             glue::glue("Could not list companies: {conditionMessage(e)}"),
@@ -402,7 +402,7 @@ server <- function(input, output, session) {
 
       result <- tryCatch(
         load_schedule_p_lob(lob, DATA_DIR, DB_PATH, grcode = grcode_to_load,
-                            vintage = "extended"),
+        ),
         error = function(e) {
           shiny::showNotification(
             glue::glue("Load failed: {conditionMessage(e)}"),
@@ -421,6 +421,29 @@ server <- function(input, output, session) {
     })
   })
 
+  # -- Observer: update AY slider to match actual data range ------------------
+  observeEvent(loaded_company_r(), {
+    co <- loaded_company_r()
+    req(!is.null(co))
+    con <- DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
+    on.exit(DBI::dbDisconnect(con), add = TRUE)
+    ay_range <- tryCatch(
+      DBI::dbGetQuery(con,
+        glue::glue_sql("SELECT MIN(accident_year) AS ay_min, MAX(accident_year) AS ay_max
+                        FROM triangles WHERE lob = {co$lob} AND grcode = {co$grcode}",
+                       .con = con)),
+      error = function(e) NULL
+    )
+    if (!is.null(ay_range) && !is.na(ay_range$ay_min)) {
+      ay_lo <- as.integer(ay_range$ay_min)
+      ay_hi <- as.integer(ay_range$ay_max)
+      shiny::updateSliderInput(session, "ay_range",
+        min = ay_lo, max = ay_hi, value = c(ay_lo, ay_hi))
+      shiny::updateSelectInput(session, "ay_base",
+        choices = ay_lo:ay_hi, selected = ay_hi)
+    }
+  })
+
   # -- Observer: switch company ------------------------------------------------
   observeEvent(input$grcode_select, {
     co <- loaded_company_r()
@@ -429,8 +452,7 @@ server <- function(input, output, session) {
     withProgress(message = "Switching company\u2026", {
       result <- tryCatch(
         load_schedule_p_lob(input$lob, DATA_DIR, DB_PATH,
-                            grcode = as.integer(input$grcode_select),
-                            vintage = "extended"),
+                            grcode = as.integer(input$grcode_select)),
         error = function(e) {
           shiny::showNotification(conditionMessage(e), type = "error"); NULL
         }
